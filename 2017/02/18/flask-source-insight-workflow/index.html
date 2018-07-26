@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+
+  <html class="light page-post">
+
+
+<head>
+  <meta charset="utf-8">
+  
+  <title>Flask 源码剖析之工作流程 | xdd1874</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  
+    <meta name="keywords" content="Python,Flask," />
+  
+
+  <meta name="description" content="Flask 是一个 Python 实现的 Web 微框架。代码简洁，易于学习。 这篇文章主要讲解了 Flask 是如何处理来自客户端的 HTTP 请求，并将结果返回给客户端。本文基于 Flask 0.3 版本来分析 Flask 的工作流程。 1. 知识准备1.1 WSGI在 Web 部署上，有一个方案被广泛使用：  首先，部署一个 Web 服务器用于接收来自客户端的 HTTP 请求。 然后，部署一">
+<meta name="keywords" content="Python,Flask">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flask 源码剖析之工作流程">
+<meta property="og:url" content="http://yoursite.com/2017/02/18/flask-source-insight-workflow/index.html">
+<meta property="og:site_name" content="xdd1874">
+<meta property="og:description" content="Flask 是一个 Python 实现的 Web 微框架。代码简洁，易于学习。 这篇文章主要讲解了 Flask 是如何处理来自客户端的 HTTP 请求，并将结果返回给客户端。本文基于 Flask 0.3 版本来分析 Flask 的工作流程。 1. 知识准备1.1 WSGI在 Web 部署上，有一个方案被广泛使用：  首先，部署一个 Web 服务器用于接收来自客户端的 HTTP 请求。 然后，部署一">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2018-05-17T12:04:36.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flask 源码剖析之工作流程">
+<meta name="twitter:description" content="Flask 是一个 Python 实现的 Web 微框架。代码简洁，易于学习。 这篇文章主要讲解了 Flask 是如何处理来自客户端的 HTTP 请求，并将结果返回给客户端。本文基于 Flask 0.3 版本来分析 Flask 的工作流程。 1. 知识准备1.1 WSGI在 Web 部署上，有一个方案被广泛使用：  首先，部署一个 Web 服务器用于接收来自客户端的 HTTP 请求。 然后，部署一">
+
+  
+
+  
+    <link rel="icon" href="/images/favicon.ico">
+  
+
+  <link href="/css/styles.css?v=eaf5ab1e" rel="stylesheet">
+
+
+  
+    <link rel="stylesheet" href="/css/personal-style.css">
+  
+
+  
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-65883197-2', 'auto');
+ga('send', 'pageview');
+
+</script>
+<!-- End Google Analytics -->
+
+
+  
+
+</head>
+
+<body>
+
+
+  
+    <span id="toolbox-mobile" class="toolbox-mobile">导航</span>
+  
+
+  <div class="post-header CENTER">
+   
+  <div class="toolbox">
+    <a class="toolbox-entry" href="/">
+      <span class="toolbox-entry-text">导航</span>
+      <i class="icon-angle-down"></i>
+      <i class="icon-home"></i>
+    </a>
+    <ul class="list-toolbox">
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/archives/"
+            target="_self"
+            >
+            博客
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/category/"
+            target="_self"
+            >
+            分类
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/tag/"
+            target="_self"
+            >
+            标签
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/about/"
+            target="_self"
+            >
+            关于
+          </a>
+        </li>
+      
+    </ul>
+  </div>
+
+
+</div>
+
+
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">文章目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#1-知识准备"><span class="toc-text">1. 知识准备</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-1-WSGI"><span class="toc-text">1.1 WSGI</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-2-Werkzeug"><span class="toc-text">1.2 Werkzeug</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#2-Flask-工作流程剖析"><span class="toc-text">2. Flask 工作流程剖析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#2-1-示例代码"><span class="toc-text">2.1 示例代码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-2-Flask-代码结构"><span class="toc-text">2.2 Flask 代码结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-3-流程分析"><span class="toc-text">2.3 流程分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-4-请求上下文"><span class="toc-text">2.4 请求上下文</span></a></li></ol></li></ol>
+  </div>
+
+
+
+<div class="content content-post CENTER">
+   <article id="post-flask-source-insight-workflow" class="article article-type-post" itemprop="blogPost">
+  <header class="article-header">
+    <h1 class="post-title">Flask 源码剖析之工作流程</h1>
+
+    <div class="article-meta">
+      <span>
+        <i class="icon-calendar"></i>
+        <span>2017.02.18</span>
+      </span>
+
+      
+        <span class="article-author">
+          <i class="icon-user"></i>
+          <span>xdd1874</span>
+        </span>
+      
+
+      
+  <span class="article-category">
+    <i class="icon-list"></i>
+    <a class="article-category-link" href="/categories/Python/">Python</a>
+  </span>
+
+
+
+      
+
+    </div>
+  </header>
+
+  <div class="article-content">
+    
+      <p>Flask 是一个 Python 实现的 Web 微框架。代码简洁，易于学习。</p>
+<p>这篇文章主要讲解了 Flask 是如何处理来自客户端的 HTTP 请求，并将结果返回给客户端。本文基于 Flask 0.3 版本来分析 Flask 的工作流程。</p>
+<h1 id="1-知识准备"><a href="#1-知识准备" class="headerlink" title="1. 知识准备"></a>1. 知识准备</h1><h2 id="1-1-WSGI"><a href="#1-1-WSGI" class="headerlink" title="1.1 WSGI"></a>1.1 WSGI</h2><p>在 Web 部署上，有一个方案被广泛使用：</p>
+<ul>
+<li>首先，部署一个 Web 服务器用于接收来自客户端的 HTTP 请求。</li>
+<li>然后，部署一个应用程序 (各种语言编写的，Java,PHP,Python等)，这个应用程序会从 Web 服务器上接收 HTTP 请求，然后处理之后再返回给 Web 服务器，最后 Web 服务器返回给客户端。</li>
+</ul>
+<p>那么 Web 服务器和应用程序之间如何交互呢？在早期，是通过 CGI 交互的。开发者可以编写 CGI 脚本。每次收到 HTTP 请求就会触发 CGI 脚本。这种方式每次接收到请求之后都会开启新的进程。大大影响了服务器的性能。所以各种语言都开始实现自己的 HTTP 服务器。Python 在标准库里加入了 http.server 模块。使用该模块时，开发者只需编写自己的子类继承<code>BaseHTTPRequestHandler</code>，添加<code>do_GET()和do_POST()</code>方法即可。</p>
+<p>还有一些其他的方式，如在 Apache 上使用<code>mod_python</code>模块来与 Web 服务器进行交互。但是使用<code>mod_python</code>的应用程序与使用 CGI 或者 http.server 编写的程序几乎没有任何相似之处。</p>
+<p>Python 可以使用上述不同的方式编写应用程序，但是在设计与 Web 服务器交互的接口时，各自又采用了特定的机制。使用 CGI 或者 http.server 编写的程序都要经过修改才能在 Apache 下运行。同样使用 CGI 编写的程序也要重写一部分代码才能应用 http.server. 这使得应用程序的可移植性很差。</p>
+<p>为了解决这一个问题，Python 社区在 PEP 333 中提出了 Web 服务器网关接口 (WSGI, Web Server Gateway Interface). David Wheeler 有句名言：“计算机科学中的任何问题，都可以通过加上另一层间接的中间层来解决。” WSGI 就是这样的一层中间层。通过这一层，用 Python 编写的应用程序就能与任何的 Web 服务器进行交互。WSGI 标准制定了一个调用惯例，如果所有主流的 Web 服务器的实现都遵循这一规则，那么应用程序以及 Web 框架不用修改代码就能够跑在服务器上。</p>
+<p>WSGI 定义了一套标准。根据定义，WSGI 应用程序是可被调用的。其规范示例如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">app</span><span class="params">(environ, start_response)</span>:</span></span><br><span class="line">    start_response(<span class="string">'200 OK'</span>, [(<span class="string">'Content-Type'</span>, <span class="string">'text/plain'</span>)])</span><br><span class="line">    <span class="keyword">yield</span> <span class="string">"Hello world!\n"</span></span><br></pre></td></tr></table></figure>
+<h2 id="1-2-Werkzeug"><a href="#1-2-Werkzeug" class="headerlink" title="1.2 Werkzeug"></a>1.2 Werkzeug</h2><p>Werkzeug 是一个 WSGI 的工具包，它可以作为 Web 框架的底层库。Flask 正是基于 Werkzeug 编写的 Web 框架。</p>
+<h1 id="2-Flask-工作流程剖析"><a href="#2-Flask-工作流程剖析" class="headerlink" title="2. Flask 工作流程剖析"></a>2. Flask 工作流程剖析</h1><h2 id="2-1-示例代码"><a href="#2-1-示例代码" class="headerlink" title="2.1 示例代码"></a>2.1 示例代码</h2><p>以 Flask 0.3 中提供的 flaskr 作为例子：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># flaskr.py</span></span><br><span class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> Flask, render_template, g</span><br><span class="line"></span><br><span class="line">app = Flask(__name__)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@app.before_request</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">before_request</span><span class="params">()</span>:</span></span><br><span class="line">    g.db = connect_db()  <span class="comment">#: 连接数据库</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@app.after_request</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">after_request</span><span class="params">(response)</span>:</span></span><br><span class="line">    g.db.close()  <span class="comment">#: 关闭数据库</span></span><br><span class="line">    <span class="keyword">return</span> response</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@app.route('/', methods=['GET'])</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">index</span><span class="params">()</span>:</span></span><br><span class="line">    data = g.db.select(<span class="string">"select * from table"</span>)</span><br><span class="line">    res = [dict(title=row[<span class="number">0</span>], text=row[<span class="number">1</span>], <span class="keyword">for</span> row <span class="keyword">in</span> data.fetchall()]</span><br><span class="line">    <span class="keyword">return</span> render_template(<span class="string">'index.html'</span>, res=res)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">app.run()</span><br></pre></td></tr></table></figure>
+<h2 id="2-2-Flask-代码结构"><a href="#2-2-Flask-代码结构" class="headerlink" title="2.2 Flask 代码结构"></a>2.2 Flask 代码结构</h2><p>以下整理了与请求处理流程相关的源代码：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Flask</span><span class="params">(object)</span>:</span></span><br><span class="line">    request_class = Request</span><br><span class="line">    response_class = Response</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, import_name)</span>:</span></span><br><span class="line">        self.view_functions = &#123;&#125;</span><br><span class="line">        self.error_handlers = &#123;&#125;</span><br><span class="line">        self.before_request_funcs = &#123;&#125;</span><br><span class="line">        self.after_request_funcs = &#123;&#125;</span><br><span class="line">        self.url_map = Map()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self, host=<span class="string">"localhost"</span>, port=<span class="number">5000</span>, **options)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">add_url_rule</span><span class="params">(self, rule, endpoint=None, view_func=None, **options)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">route</span><span class="params">(self, rule, **options)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">before_request</span><span class="params">(self, f)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">after_request</span><span class="params">(self, f)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">dispatch_request</span><span class="params">(self, rv)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">make_response</span><span class="params">(self, rv)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">preprocess_request</span><span class="params">(self)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">process_response</span><span class="params">(self, response)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">wsgi_app</span><span class="params">(self, environ, start_response)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, environ, start_response)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self.wsgi_app(environ, start_response)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">_RequestContext</span><span class="params">(object)</span>:</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">_request_ctx_stack = LocalStack()</span><br><span class="line">current_app = LocalProxy(<span class="keyword">lambda</span>: _request_ctx_stack.top.app)</span><br><span class="line">request = LocalProxy(<span class="keyword">lambda</span>: _request_ctx_stack.top.request)</span><br><span class="line">session = LocalProxy(<span class="keyword">lambda</span>: _request_ctx_stack.top.session)</span><br><span class="line">g = LocalProxy(<span class="keyword">lambda</span>: _request_ctx_stack.top.g)</span><br></pre></td></tr></table></figure>
+<p><code>view_functions</code>存放编写的视图函数,如上述例子中的<code>index</code>函数</p>
+<p><code>error_handlers</code>存放编写的错误处理函数，如上述例子的<code>page_not_found</code>函数</p>
+<p><code>before_request_funcs</code>存放预处理函数，如上述例子的<code>before_request</code>函数，这类函数都是在视图函数之前先执行处理。</p>
+<p><code>after_request_funcs</code>存放后处理函数，如上述例子的<code>after_request</code>函数，同理，这类函数都是在视图函数之后执行。</p>
+<p><code>url_map</code>存放URI到视图函数的映射，即保存了<code>app.route</code>这个装饰器的信息。</p>
+<h2 id="2-3-流程分析"><a href="#2-3-流程分析" class="headerlink" title="2.3 流程分析"></a>2.3 流程分析</h2><p>当我们输入<code>python flaskr.py</code>之后，实例化<code>app</code>，将相应的视图函数、预处理函数、后处理函数、错误处理函数存放到相应的变量当中，然后执行<code>app.run()</code>。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">def run(self, host=&quot;localhost&quot;, port=5000, **options):</span><br><span class="line">    from werkzeug.serving import run_simple</span><br><span class="line">    return run_simple(host, port, self, **options)</span><br></pre></td></tr></table></figure>
+<p><code>run()</code>方法中调用<code>__call__()</code>将<code>wsgi</code>应用传给服务器，这样开启了Web服务。</p>
+<p>当我们在浏览器输入<code>http://localhost:5000/</code>回车之后，<code>wsgi_app()</code>方法接受到来自客户端的请求，开始处理。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">wsgi_app</span><span class="params">(self, environ, start_response)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> self.request_context(environ):</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            rv = self.preprocess_request()  <span class="comment">#: 执行预处理函数</span></span><br><span class="line">            <span class="keyword">if</span> rv <span class="keyword">is</span> <span class="keyword">None</span>:</span><br><span class="line">                rv = self.dispatch_request()  <span class="comment">#: 执行视图函数</span></span><br><span class="line">            response = self.make_response(rv)</span><br><span class="line">            response = self.process_response(response) <span class="comment">#: 执行后处理函数</span></span><br><span class="line">        <span class="keyword">except</span> Exception, e:</span><br><span class="line">            response = self.make_response(self.handle_exception(e))</span><br><span class="line">        <span class="keyword">return</span> response(environ, start_response)</span><br></pre></td></tr></table></figure>
+<p><code>wsgi_app()</code>可以说是<code>Flask</code>运行机制的核心代码。可以看到，通过上下文处理器<code>with</code>将<code>current_app</code>, <code>request</code>, <code>session</code>, <code>g</code>变量存入<code>Flask</code>的上下文实例变量当中。然后调用<code>preprocess_request()</code>开启数据库连接，接着执行<code>dispatch_request()</code>找到URL路由并且执行<code>index</code>视图函数，将视图函数返回的值经过<code>make_response()</code>处理之后，执行<code>process_response()</code>关闭数据库连接。然后将最后的<code>Response</code>实例传给WSGI服务器。</p>
+<h2 id="2-4-请求上下文"><a href="#2-4-请求上下文" class="headerlink" title="2.4 请求上下文"></a>2.4 请求上下文</h2><p>Flask 应用在处理每个 HTTP 请求的时候，都会构造一个上下文对象。对于该请求的处理过程，都会在这个上下文对象中进行。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">_RequestContext</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, app, environ)</span>:</span></span><br><span class="line">        self.app = app</span><br><span class="line">        self.url_adapter = app.url_map.bind_to_environ(environ)</span><br><span class="line">        self.request = app.request_class(environ)</span><br><span class="line">        self.session = app.open_session(self.request)</span><br><span class="line">        <span class="keyword">if</span> self.session <span class="keyword">is</span> <span class="keyword">None</span>:</span><br><span class="line">            self.session = _NullSession()</span><br><span class="line">        self.g = _RequestGlobals()</span><br><span class="line">        self.flashes = <span class="keyword">None</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            self.request.endpoint, self.request.view_args = \</span><br><span class="line">                self.url_adapter.match()</span><br><span class="line">        <span class="keyword">except</span> HTTPException, e:</span><br><span class="line">            <span class="keyword">print</span> e.code, e.description</span><br><span class="line">            self.request.routing_exception = e</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">push</span><span class="params">(self)</span>:</span></span><br><span class="line">        _request_ctx_stack.push(self)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">pop</span><span class="params">(self)</span>:</span></span><br><span class="line">        _request_ctx_stack.pop()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__enter__</span><span class="params">(self)</span>:</span></span><br><span class="line">        self.push()</span><br><span class="line">        <span class="keyword">return</span> self</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__exit__</span><span class="params">(self, exc_type, exc_value, tb)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> tb <span class="keyword">is</span> <span class="keyword">None</span> <span class="keyword">or</span> <span class="keyword">not</span> self.app.debug:</span><br><span class="line">            self.pop()</span><br></pre></td></tr></table></figure>
+<p>上下文对象主要存放了以下属性：</p>
+<ul>
+<li><code>app</code>: 当前请求的Flask应用</li>
+<li><code>request</code>: 当前请求的<code>Request</code>实例</li>
+<li><code>session</code>: 当前请求的会话信息</li>
+<li><code>g</code>: 此属性可以存储一些全局变量</li>
+</ul>
+<p>当进入这个上下文对象之后，会触发<code>_request_ctx_stack.push(self)</code>，将上述定义的属性压入栈中。<code>_request_ctx_stack</code>是使用<code>werkzeug</code>定义的一种<code>LocalStack</code>数据结构。<code>LocalStack</code>是一个栈结构，它可以将<code>Greenlet</code>或者<code>thread</code>推入、弹出，也可以快速拿到栈顶对象。这些修改对其他线程隔离，不会影响其他线程。(具体请看<a href="https://blog.tonyseek.com/post/the-context-mechanism-of-flask/" target="_blank" rel="noopener">Flask 的 Context 机制</a>, <a href="https://segmentfault.com/a/1190000004859568" target="_blank" rel="noopener">深入 Flask 源码理解 Context</a>)。正式基于这个特性，我们可以在Flask应用中访问<code>app</code>,<code>request</code>,<code>session</code>,<code>g</code>属性。定义如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">_request_ctx_stack = LocalStack()</span><br><span class="line">current_app = LocalProxy(lambda: _request_ctx_stack.top.app)</span><br><span class="line">request = LocalProxy(lambda: _request_ctx_stack.top.request)</span><br><span class="line">session = LocalProxy(lambda: _request_ctx_stack.top.session)</span><br><span class="line">g = LocalProxy(lambda: _request_ctx_stack.top.g)</span><br></pre></td></tr></table></figure>
+
+    
+  </div>
+</article>
+
+</div>
+
+
+  <a id="backTop" class="back-top">
+    <i class="icon-angle-up"></i>
+  </a>
+
+
+
+  <div class="modal" id="modal">
+  <span id="cover" class="cover hide"></span>
+  <div id="modal-dialog" class="modal-dialog hide-dialog">
+    <div class="modal-header">
+      <span id="close" class="btn-close">关闭</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <ul class="list-toolbox">
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/archives/"
+              target="_self"
+              >
+              博客
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/category/"
+              target="_self"
+              >
+              分类
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/tag/"
+              target="_self"
+              >
+              标签
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/about/"
+              target="_self"
+              >
+              关于
+            </a>
+          </li>
+        
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+
+
+  
+      <div class="fexo-comments comments-post">
+    
+
+    
+
+
+
+
+    
+<div id="gitment"></div>
+<link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
+<script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+<script>
+  var gitment = new Gitment({
+    owner: 'Caratpine',
+    repo: 'Caratpine.github.io',
+    oauth: {
+      client_id: '0a18b1c985d0c1b003ab',
+      client_secret: '837cce55a8c61171da791b539b49a7189b6fc21c',
+    },
+  })
+  gitment.render('gitment')
+</script>
+
+  </div>
+
+  
+
+  <script type="text/javascript">
+  function loadScript(url, callback) {
+    var script = document.createElement('script')
+    script.type = 'text/javascript';
+
+    if (script.readyState) { //IE
+      script.onreadystatechange = function() {
+        if (script.readyState == 'loaded' ||
+          script.readyState == 'complete') {
+          script.onreadystatechange = null;
+          callback();
+        }
+      };
+    } else { //Others
+      script.onload = function() {
+        callback();
+      };
+    }
+
+    script.src = url;
+    document.getElementsByTagName('head')[0].appendChild(script);
+  }
+
+  window.onload = function() {
+    loadScript('/js/bundle.js?235683', function() {
+      // load success
+    });
+  }
+</script>
+
+</body>
+</html>
