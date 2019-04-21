@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+
+
+  <html class="light page-post">
+
+
+<head>
+  <meta charset="utf-8">
+  
+  <title>简易的任务调度工具：Huey | xdd1874</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  
+    <meta name="keywords" content="Python,Huey," />
+  
+
+  <meta name="description" content="Huey 是一个基于 Python 开发的简易任务调度队列。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务调度系统该有的功能它都有。 Huey 支持：  进程、线程、协程任务并发模型 安排任务的调度时间 定时任务 异常重试机制 定制任务优先级 存储任务执行结果 加锁任务 任务管道及任务链  简易入门使用 Huey使用 Huey 需要有三个组件：  一个消费者程序，例如">
+<meta name="keywords" content="Python,Huey">
+<meta property="og:type" content="article">
+<meta property="og:title" content="简易的任务调度工具：Huey">
+<meta property="og:url" content="http://yoursite.com/2019/04/21/getting-started-huey/index.html">
+<meta property="og:site_name" content="xdd1874">
+<meta property="og:description" content="Huey 是一个基于 Python 开发的简易任务调度队列。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务调度系统该有的功能它都有。 Huey 支持：  进程、线程、协程任务并发模型 安排任务的调度时间 定时任务 异常重试机制 定制任务优先级 存储任务执行结果 加锁任务 任务管道及任务链  简易入门使用 Huey使用 Huey 需要有三个组件：  一个消费者程序，例如">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-04-21T11:27:51.420Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="简易的任务调度工具：Huey">
+<meta name="twitter:description" content="Huey 是一个基于 Python 开发的简易任务调度队列。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务调度系统该有的功能它都有。 Huey 支持：  进程、线程、协程任务并发模型 安排任务的调度时间 定时任务 异常重试机制 定制任务优先级 存储任务执行结果 加锁任务 任务管道及任务链  简易入门使用 Huey使用 Huey 需要有三个组件：  一个消费者程序，例如">
+
+  
+
+  
+    <link rel="icon" href="/images/favicon.ico">
+  
+
+  <link href="/css/styles.css?v=eaf5ab1e" rel="stylesheet">
+
+
+  
+    <link rel="stylesheet" href="/css/personal-style.css">
+  
+
+  
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-65883197-2', 'auto');
+ga('send', 'pageview');
+
+</script>
+<!-- End Google Analytics -->
+
+
+  
+
+</head>
+
+<body>
+
+
+  
+    <span id="toolbox-mobile" class="toolbox-mobile">导航</span>
+  
+
+  <div class="post-header CENTER">
+   
+  <div class="toolbox">
+    <a class="toolbox-entry" href="/">
+      <span class="toolbox-entry-text">导航</span>
+      <i class="icon-angle-down"></i>
+      <i class="icon-home"></i>
+    </a>
+    <ul class="list-toolbox">
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/archives/"
+            target="_self"
+            >
+            博客
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/category/"
+            target="_self"
+            >
+            分类
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/tag/"
+            target="_self"
+            >
+            标签
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/about/"
+            target="_self"
+            >
+            关于
+          </a>
+        </li>
+      
+    </ul>
+  </div>
+
+
+</div>
+
+
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">文章目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#简易入门"><span class="toc-text">简易入门</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#使用-Huey"><span class="toc-text">使用 Huey</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#获取任务执行的结果"><span class="toc-text">获取任务执行的结果</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#设置任务的执行时间"><span class="toc-text">设置任务的执行时间</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#异常重试"><span class="toc-text">异常重试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#取消或暂停任务"><span class="toc-text">取消或暂停任务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#任务链"><span class="toc-text">任务链</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#加锁任务"><span class="toc-text">加锁任务</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Flask-与-Huey-的应用"><span class="toc-text">Flask 与 Huey 的应用</span></a></li></ol>
+  </div>
+
+
+
+<div class="content content-post CENTER">
+   <article id="post-getting-started-huey" class="article article-type-post" itemprop="blogPost">
+  <header class="article-header">
+    <h1 class="post-title">简易的任务调度工具：Huey</h1>
+
+    <div class="article-meta">
+      <span>
+        <i class="icon-calendar"></i>
+        <span>2019.04.21</span>
+      </span>
+
+      
+        <span class="article-author">
+          <i class="icon-user"></i>
+          <span>xdd1874</span>
+        </span>
+      
+
+      
+  <span class="article-category">
+    <i class="icon-list"></i>
+    <a class="article-category-link" href="/categories/Python/">Python</a>
+  </span>
+
+
+
+      
+
+    </div>
+  </header>
+
+  <div class="article-content">
+    
+      <p>Huey 是一个基于 Python 开发的简易任务调度队列。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务调度系统该有的功能它都有。</p>
+<p>Huey 支持：</p>
+<ul>
+<li>进程、线程、协程任务并发模型</li>
+<li>安排任务的调度时间</li>
+<li>定时任务</li>
+<li>异常重试机制</li>
+<li>定制任务优先级</li>
+<li>存储任务执行结果</li>
+<li>加锁任务</li>
+<li>任务管道及任务链</li>
+</ul>
+<h2 id="简易入门"><a href="#简易入门" class="headerlink" title="简易入门"></a>简易入门</h2><h3 id="使用-Huey"><a href="#使用-Huey" class="headerlink" title="使用 Huey"></a>使用 Huey</h3><p>使用 Huey 需要有三个组件：</p>
+<ul>
+<li>一个消费者程序，例如 Web 应用</li>
+<li>一个消费者程序，用来执行队列中的任务</li>
+<li>存储任务的队列，例如 Redis</li>
+</ul>
+<p>项目结构：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>Huey 的 API 与 Celery 类似，需要先创建一个 Huey 实例</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># config.py</span></span><br><span class="line"><span class="keyword">from</span> huey <span class="keyword">import</span> RedisHuey</span><br><span class="line"></span><br><span class="line">huey = RedisHuey()</span><br></pre></td></tr></table></figure>
+<p>然后定义一些任务</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># task.py</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> config <span class="keyword">import</span> huey</span><br><span class="line"></span><br><span class="line"><span class="meta">@huey.task()</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">count_beans</span><span class="params">(num)</span>:</span></span><br><span class="line">    print(<span class="string">'-- counted %s beans --'</span> % num)</span><br></pre></td></tr></table></figure>
+<p>然后创建一个生产者程序</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># main.py</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> config <span class="keyword">import</span> huey</span><br><span class="line"><span class="keyword">from</span> tasks <span class="keyword">import</span> count_beans</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    beans = raw_input(<span class="string">'How many beans?'</span>)</span><br><span class="line">    count_beans(int(beans))</span><br><span class="line">    print(<span class="string">'Enqueued job to count %s beans'</span> % beans)</span><br></pre></td></tr></table></figure>
+<p>运行 Huey 消费者程序</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">huey_consumer.py main.huey</span><br></pre></td></tr></table></figure>
+<p>再运行生产者程序</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python main.py</span><br></pre></td></tr></table></figure>
+<h3 id="获取任务执行的结果"><a href="#获取任务执行的结果" class="headerlink" title="获取任务执行的结果"></a>获取任务执行的结果</h3><p>有时候生产者程序在生产了一个任务之后，需要得到任务执行后的结果，只需要在定义任务的时候加上返回操作</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># task.py</span></span><br><span class="line"><span class="keyword">from</span> config <span class="keyword">import</span> huey</span><br><span class="line"></span><br><span class="line"><span class="meta">@huey.task()</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">count_beans</span><span class="params">(num)</span>:</span></span><br><span class="line">    print(<span class="string">'-- counted %s beans --'</span> % num)</span><br><span class="line">    <span class="keyword">return</span> <span class="string">'Count %s beans'</span> % num</span><br></pre></td></tr></table></figure>
+<p>重启 Huey 消费者程序， 在解释器中运行消费者程序</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> main <span class="keyword">import</span> count_beans</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>res = count_beans(<span class="number">100</span>)</span><br><span class="line">&gt;&gt; print(res)</span><br><span class="line">&lt;huey.api.TaskResultWrapper object at <span class="number">0xb7471a4c</span>&gt;</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>res()                  <span class="comment"># 获取结果</span></span><br><span class="line"><span class="string">'Counted 100 beans'</span></span><br></pre></td></tr></table></figure>
+<h3 id="设置任务的执行时间"><a href="#设置任务的执行时间" class="headerlink" title="设置任务的执行时间"></a>设置任务的执行时间</h3><p>有时候，我们不想立即执行任务，想要过一段时间再执行。比如，想要两个小时候发布一篇博客。我们可以这样执行</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">import</span> datetime</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>res = count_beans.schedule(args=(<span class="number">100</span>,), delay=<span class="number">60</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>print(res)</span><br><span class="line">&lt;huey.api.TaskResultWrapper object at <span class="number">0xb72915ec</span>&gt;</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>res()  <span class="comment"># 返回是 None, 任务还没有执行</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>res()</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>res(blocking=<span class="keyword">True</span>)  <span class="comment"># 阻塞等待任务执行结果</span></span><br><span class="line"><span class="string">'Counted 100 beans'</span></span><br></pre></td></tr></table></figure>
+<h3 id="异常重试"><a href="#异常重试" class="headerlink" title="异常重试"></a>异常重试</h3><p>有时候，任务在执行过程中，由于一些原因，导致执行失败，需要我们重新执行任务。 Huey 支持任务异常重试操作，在定义任务的时候指定 <code>retries</code> 参数，任务执行异常之后，会重新进入队列被消费者消费执行，直到指定的次数为止。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># task.py</span></span><br><span class="line"><span class="keyword">from</span> config <span class="keyword">import</span> huey</span><br><span class="line"></span><br><span class="line"><span class="meta">@huey.task(retries=3)</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">try_thrice</span><span class="params">()</span>:</span></span><br><span class="line">    print(<span class="string">'tring...'</span>)</span><br><span class="line">    <span class="keyword">raise</span> Exception(<span class="string">'nope'</span>)</span><br></pre></td></tr></table></figure>
+<p>我们也可以指定每次重新执行的间隔时间</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># task.py</span></span><br><span class="line"><span class="keyword">from</span> config <span class="keyword">import</span> huey</span><br><span class="line"></span><br><span class="line"><span class="meta">@huey.task(retries=3, retry_delay=10)</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">try_thrice</span><span class="params">()</span>:</span></span><br><span class="line">    print(<span class="string">'tring...'</span>)</span><br><span class="line">    <span class="keyword">raise</span> Exception(<span class="string">'nope'</span>)</span><br></pre></td></tr></table></figure>
+<h3 id="取消或暂停任务"><a href="#取消或暂停任务" class="headerlink" title="取消或暂停任务"></a>取消或暂停任务</h3><p>有时候，我们想取消队列当中的任务执行，可以使用 <code>revoke</code> 操作，再使用这个操作前，实例化 Huey 类的时候，需要将 <code>result_store</code> 设置为 <code>True</code>.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">res = count_beans(<span class="number">10000000</span>)</span><br><span class="line">res.revoke()</span><br><span class="line"></span><br><span class="line">res = count_beans.schedule(args=(<span class="number">100000</span>,) delay=<span class="number">100</span>)</span><br><span class="line">res.revoke()</span><br></pre></td></tr></table></figure>
+<h3 id="任务链"><a href="#任务链" class="headerlink" title="任务链"></a>任务链</h3><p>Huey 支持多个任务串在一起链成一个任务执行。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@huey.task()</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">add</span><span class="params">(a, b)</span>:</span></span><br><span class="line">    <span class="keyword">return</span> a + b</span><br><span class="line"></span><br><span class="line">res = add(<span class="number">1</span>, <span class="number">2</span>)</span><br></pre></td></tr></table></figure>
+<p>上面的操作与下面的操作是等价的</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">task = add.s(<span class="number">1</span> + <span class="number">2</span>)</span><br><span class="line">result = huey.enqueue(task)</span><br></pre></td></tr></table></figure>
+<p>被 <code>huey.task()</code> 装饰的任务，会返回一个 <code>TaskWrapper</code> 对象，这个对象的 <code>s()</code> 方法会创建一个 <code>QueueTask</code> 实例，<code>QueueTask</code> 就是消息队列中的消息实例，它被序列化入队，然后出队反序列化被消费者执行。</p>
+<p>我们可以用 <code>QueueTask.then()</code> 方法将所有的 <code>QueueTask</code> 链接起来。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">add_task = add.s(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">pipline = (add_task</span><br><span class="line">            .then(add, <span class="number">3</span>)</span><br><span class="line">            .then(add, <span class="number">4</span>)</span><br><span class="line">            .then(add, <span class="number">5</span>))</span><br><span class="line"></span><br><span class="line">res = huey.enqueue(pipline)</span><br><span class="line"></span><br><span class="line">print([res.get(blocking=<span class="keyword">True</span>) <span class="keyword">for</span> result <span class="keyword">in</span> results])</span><br><span class="line"></span><br><span class="line"><span class="comment"># [3, 6, 10, 15]</span></span><br></pre></td></tr></table></figure>
+<h3 id="加锁任务"><a href="#加锁任务" class="headerlink" title="加锁任务"></a>加锁任务</h3><p>有时候，我们在执行一个任务的时候，需要加锁执行。可以使用 <code>huey.lock_task()</code> 方法，这个方法可以用装饰器或者上下文管理方式使用。如果是使用装饰器方法的话，需要装饰在方法的最内层。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@huey.task()</span></span><br><span class="line"><span class="meta">@huey.lock_task('reports-lock')</span></span><br><span class="line">def generate_report();</span><br><span class="line">    run_something()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@huey.task()</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">backup</span><span class="params">()</span>:</span></span><br><span class="line">    do_something()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> huey.lock_task(<span class="string">'db-backup'</span>):</span><br><span class="line">        db_db_backup()</span><br></pre></td></tr></table></figure>
+<h2 id="Flask-与-Huey-的应用"><a href="#Flask-与-Huey-的应用" class="headerlink" title="Flask 与 Huey 的应用"></a>Flask 与 Huey 的应用</h2>
+    
+  </div>
+</article>
+
+</div>
+
+
+  <a id="backTop" class="back-top">
+    <i class="icon-angle-up"></i>
+  </a>
+
+
+
+  <div class="modal" id="modal">
+  <span id="cover" class="cover hide"></span>
+  <div id="modal-dialog" class="modal-dialog hide-dialog">
+    <div class="modal-header">
+      <span id="close" class="btn-close">关闭</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <ul class="list-toolbox">
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/archives/"
+              target="_self"
+              >
+              博客
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/category/"
+              target="_self"
+              >
+              分类
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/tag/"
+              target="_self"
+              >
+              标签
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/about/"
+              target="_self"
+              >
+              关于
+            </a>
+          </li>
+        
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+
+
+  
+      <div class="fexo-comments comments-post">
+    
+
+    
+
+
+
+
+    
+<div id="gitment"></div>
+<link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
+<script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+<script>
+  var gitment = new Gitment({
+    owner: 'Caratpine',
+    repo: 'Caratpine.github.io',
+    oauth: {
+      client_id: '0a18b1c985d0c1b003ab',
+      client_secret: '837cce55a8c61171da791b539b49a7189b6fc21c',
+    },
+  })
+  gitment.render('gitment')
+</script>
+
+  </div>
+
+  
+
+  <script type="text/javascript">
+  function loadScript(url, callback) {
+    var script = document.createElement('script')
+    script.type = 'text/javascript';
+
+    if (script.readyState) { //IE
+      script.onreadystatechange = function() {
+        if (script.readyState == 'loaded' ||
+          script.readyState == 'complete') {
+          script.onreadystatechange = null;
+          callback();
+        }
+      };
+    } else { //Others
+      script.onload = function() {
+        callback();
+      };
+    }
+
+    script.src = url;
+    document.getElementsByTagName('head')[0].appendChild(script);
+  }
+
+  window.onload = function() {
+    loadScript('/js/bundle.js?235683', function() {
+      // load success
+    });
+  }
+</script>
+
+</body>
+</html>
