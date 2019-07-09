@@ -7,7 +7,7 @@
 <head>
   <meta charset="utf-8">
   
-  <title>任务调度队列 Huey 简易入门 | xdd1874</title>
+  <title>任务队列调度系统 Huey 简易入门 | xdd1874</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -15,18 +15,18 @@
     <meta name="keywords" content="Python,Huey," />
   
 
-  <meta name="description" content="Huey 是一个基于 Python 开发的简易任务调度队列。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务调度系统该有的功能它都有。 Huey 支持：  进程、线程、协程任务并发模型 安排任务的调度时间 定时任务 异常重试机制 定制任务优先级 存储任务执行结果 加锁任务 任务管道及任务链  简易入门使用 Huey环境 123Python 3.7Huey 2.0.1Re">
+  <meta name="description" content="0x00 介绍Huey 是一个基于 Python 开发的简易任务队列调度系统。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务队列调度系统该有的功能它都有。 Huey 支持：  进程、线程、协程任务并发模型 安排任务的调度时间 定时任务 异常重试机制 定制任务优先级 存储任务执行结果 加锁任务 任务管道及任务链  0x01 简易入门使用 Huey环境 123Python">
 <meta name="keywords" content="Python,Huey">
 <meta property="og:type" content="article">
-<meta property="og:title" content="任务调度队列 Huey 简易入门">
+<meta property="og:title" content="任务队列调度系统 Huey 简易入门">
 <meta property="og:url" content="http://yoursite.com/2019/04/21/getting-started-huey/index.html">
 <meta property="og:site_name" content="xdd1874">
-<meta property="og:description" content="Huey 是一个基于 Python 开发的简易任务调度队列。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务调度系统该有的功能它都有。 Huey 支持：  进程、线程、协程任务并发模型 安排任务的调度时间 定时任务 异常重试机制 定制任务优先级 存储任务执行结果 加锁任务 任务管道及任务链  简易入门使用 Huey环境 123Python 3.7Huey 2.0.1Re">
+<meta property="og:description" content="0x00 介绍Huey 是一个基于 Python 开发的简易任务队列调度系统。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务队列调度系统该有的功能它都有。 Huey 支持：  进程、线程、协程任务并发模型 安排任务的调度时间 定时任务 异常重试机制 定制任务优先级 存储任务执行结果 加锁任务 任务管道及任务链  0x01 简易入门使用 Huey环境 123Python">
 <meta property="og:locale" content="default">
-<meta property="og:updated_time" content="2019-04-22T03:44:02.730Z">
+<meta property="og:updated_time" content="2019-07-09T02:01:33.672Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="任务调度队列 Huey 简易入门">
-<meta name="twitter:description" content="Huey 是一个基于 Python 开发的简易任务调度队列。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务调度系统该有的功能它都有。 Huey 支持：  进程、线程、协程任务并发模型 安排任务的调度时间 定时任务 异常重试机制 定制任务优先级 存储任务执行结果 加锁任务 任务管道及任务链  简易入门使用 Huey环境 123Python 3.7Huey 2.0.1Re">
+<meta name="twitter:title" content="任务队列调度系统 Huey 简易入门">
+<meta name="twitter:description" content="0x00 介绍Huey 是一个基于 Python 开发的简易任务队列调度系统。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务队列调度系统该有的功能它都有。 Huey 支持：  进程、线程、协程任务并发模型 安排任务的调度时间 定时任务 异常重试机制 定制任务优先级 存储任务执行结果 加锁任务 任务管道及任务链  0x01 简易入门使用 Huey环境 123Python">
 
   
 
@@ -126,7 +126,7 @@ ga('send', 'pageview');
 
   <div id="toc" class="toc-article">
     <strong class="toc-title">文章目录</strong>
-    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#简易入门"><span class="toc-text">简易入门</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#使用-Huey"><span class="toc-text">使用 Huey</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#获取任务执行的结果"><span class="toc-text">获取任务执行的结果</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#设置任务的执行时间"><span class="toc-text">设置任务的执行时间</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#异常重试"><span class="toc-text">异常重试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#取消或暂停任务"><span class="toc-text">取消或暂停任务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#任务链"><span class="toc-text">任务链</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#加锁任务"><span class="toc-text">加锁任务</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Flask-与-Huey-的应用"><span class="toc-text">Flask 与 Huey 的应用</span></a></li></ol>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-介绍"><span class="toc-text">0x00 介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-简易入门"><span class="toc-text">0x01 简易入门</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#使用-Huey"><span class="toc-text">使用 Huey</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#获取任务执行的结果"><span class="toc-text">获取任务执行的结果</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#设置任务的执行时间"><span class="toc-text">设置任务的执行时间</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#异常重试"><span class="toc-text">异常重试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#取消或暂停任务"><span class="toc-text">取消或暂停任务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#任务链"><span class="toc-text">任务链</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#加锁任务"><span class="toc-text">加锁任务</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Flask-与-Huey-的应用"><span class="toc-text">0x02 Flask 与 Huey 的应用</span></a></li></ol>
   </div>
 
 
@@ -134,7 +134,7 @@ ga('send', 'pageview');
 <div class="content content-post CENTER">
    <article id="post-getting-started-huey" class="article article-type-post" itemprop="blogPost">
   <header class="article-header">
-    <h1 class="post-title">任务调度队列 Huey 简易入门</h1>
+    <h1 class="post-title">任务队列调度系统 Huey 简易入门</h1>
 
     <div class="article-meta">
       <span>
@@ -164,7 +164,7 @@ ga('send', 'pageview');
 
   <div class="article-content">
     
-      <p>Huey 是一个基于 Python 开发的简易任务调度队列。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务调度系统该有的功能它都有。</p>
+      <h2 id="0x00-介绍"><a href="#0x00-介绍" class="headerlink" title="0x00 介绍"></a>0x00 介绍</h2><p>Huey 是一个基于 Python 开发的简易任务队列调度系统。类似于 Celery, 虽然没有 Celery 那么强大，但是胜在简洁。任务队列调度系统该有的功能它都有。</p>
 <p>Huey 支持：</p>
 <ul>
 <li>进程、线程、协程任务并发模型</li>
@@ -176,7 +176,7 @@ ga('send', 'pageview');
 <li>加锁任务</li>
 <li>任务管道及任务链</li>
 </ul>
-<h2 id="简易入门"><a href="#简易入门" class="headerlink" title="简易入门"></a>简易入门</h2><h3 id="使用-Huey"><a href="#使用-Huey" class="headerlink" title="使用 Huey"></a>使用 Huey</h3><p>环境</p>
+<h2 id="0x01-简易入门"><a href="#0x01-简易入门" class="headerlink" title="0x01 简易入门"></a>0x01 简易入门</h2><h3 id="使用-Huey"><a href="#使用-Huey" class="headerlink" title="使用 Huey"></a>使用 Huey</h3><p>环境</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Python 3.7</span><br><span class="line">Huey 2.0.1</span><br><span class="line">Redis</span><br></pre></td></tr></table></figure>
 <p>demo <a href="https://github.com/Caratpine/learn-huey/tree/master/huey_demo" target="_blank" rel="noopener">地址</a></p>
 <p>使用 Huey 需要有三个组件：</p>
@@ -218,7 +218,12 @@ ga('send', 'pageview');
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">add_task = add.s(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">pipline = (add_task</span><br><span class="line">            .then(add, <span class="number">3</span>)</span><br><span class="line">            .then(add, <span class="number">4</span>)</span><br><span class="line">            .then(add, <span class="number">5</span>))</span><br><span class="line"></span><br><span class="line">res = huey.enqueue(pipline)</span><br><span class="line"></span><br><span class="line">print([res.get(blocking=<span class="keyword">True</span>) <span class="keyword">for</span> result <span class="keyword">in</span> results])</span><br><span class="line"></span><br><span class="line"><span class="comment"># [3, 6, 10, 15]</span></span><br></pre></td></tr></table></figure>
 <h3 id="加锁任务"><a href="#加锁任务" class="headerlink" title="加锁任务"></a>加锁任务</h3><p>有时候，我们在执行一个任务的时候，需要加锁执行。可以使用 <code>huey.lock_task()</code> 方法，这个方法可以用装饰器或者上下文管理方式使用。如果是使用装饰器方法的话，需要装饰在方法的最内层。</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@huey.task()</span></span><br><span class="line"><span class="meta">@huey.lock_task('reports-lock')</span></span><br><span class="line">def generate_report();</span><br><span class="line">    run_something()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@huey.task()</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">backup</span><span class="params">()</span>:</span></span><br><span class="line">    do_something()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> huey.lock_task(<span class="string">'db-backup'</span>):</span><br><span class="line">        db_db_backup()</span><br></pre></td></tr></table></figure>
-<h2 id="Flask-与-Huey-的应用"><a href="#Flask-与-Huey-的应用" class="headerlink" title="Flask 与 Huey 的应用"></a>Flask 与 Huey 的应用</h2>
+<h2 id="0x02-Flask-与-Huey-的应用"><a href="#0x02-Flask-与-Huey-的应用" class="headerlink" title="0x02 Flask 与 Huey 的应用"></a>0x02 Flask 与 Huey 的应用</h2><p>在 Flask 中使用 Huey 的项目结构如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">├── __init__.py</span><br><span class="line">├── autoapp.py</span><br><span class="line">├── huey_worker.py</span><br><span class="line">└── web</span><br><span class="line">    ├── __init__.py</span><br><span class="line">    ├── app.py</span><br><span class="line">    ├── hueyapp.py</span><br><span class="line">    ├── tasks.py</span><br><span class="line">    └── views.py</span><br></pre></td></tr></table></figure>
+<p>Demo <a href="https://github.com/Caratpine/learn-huey/tree/master/flask_huey_demo" target="_blank" rel="noopener">地址</a></p>
+<p>需要注意的是 Flask 中有个应用上线文的概念，如果定义的 task 中 存在跟 Flask 应用上下文有关的操作，比如用 Flask-SQLAlachemy 操作数据库等，需要引入应用上下文环境。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># flask_huey_demo/web/tasks.py</span></span><br><span class="line"></span><br><span class="line"><span class="meta">@huey.task()</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">count_beans</span><span class="params">(num)</span>:</span></span><br><span class="line">    <span class="keyword">from</span> autoapp <span class="keyword">import</span> app</span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> app_context():</span><br><span class="line">        <span class="comment"># 一些 db 操作</span></span><br><span class="line">        print(<span class="string">'-- counted %s beans --'</span> % num)</span><br><span class="line">        <span class="keyword">return</span> <span class="string">'Count %s beans'</span> % num</span><br></pre></td></tr></table></figure>
+
     
   </div>
 </article>
