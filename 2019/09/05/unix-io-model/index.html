@@ -29,7 +29,7 @@
 <meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-2eac4612a152df1e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
 <meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-86bc822c30774a70.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
 <meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-9d276e5dd30adbc4.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:updated_time" content="2019-09-18T09:05:56.382Z">
+<meta property="og:updated_time" content="2019-09-19T15:37:31.350Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Unix 网络 I&#x2F;O 模型">
 <meta name="twitter:description" content="这篇文章主要是对《Unix 网络编程卷1》第六章第二小节的一个总结。 Unix 的网络 IO 模型主要有：  阻塞式 I/O 非阻塞式 I/O I/O 复用 信号驱动式 I/O 异步 I/O  在介绍各种模型之前，先明确一个知识点：TCP 在建立连接之后，操作系统内核会为每一个连接创建相应的资源，比如接收缓冲区，发送缓冲区。TCP 的全双工模式，滑动窗口，重传等功能都是在两端的各自缓冲区中进行。当">
@@ -200,7 +200,7 @@ ga('send', 'pageview');
 <p>上图可以看出，前 4 种模型的主要区别在于第一阶段，因为它们的第二阶段是一样的：<strong>在数据从内核复制到应用程序期间，进程阻塞于 recvfrom 调用。</strong>相反，异步 I/O 模型在这两个阶段都要处理。</p>
 <h2 id="同步-I-O-和-异步-I-O"><a href="#同步-I-O-和-异步-I-O" class="headerlink" title="同步 I/O 和 异步 I/O"></a>同步 I/O 和 异步 I/O</h2><p>POSIX 把这两个术语定义如下：</p>
 <ul>
-<li>同步 I/O: I/O 操作导致请求进程阻塞，知道 I/O 操作完成。</li>
+<li>同步 I/O: I/O 操作导致请求进程阻塞，直到 I/O 操作完成。</li>
 <li>异步 I/O: I/O 操作不导致请求进程阻塞。</li>
 </ul>
 <p>根据上述同步 I/O  和异步 I/O 的定义，我们很容易的能够得出：阻塞 I/O, 非阻塞 I/O, I/O 复用，信号驱动式 I/O 都是<strong>同步 IO 模型</strong>。只有 异步 I/O 是 POSIX 定义的异步 I/O.</p>
