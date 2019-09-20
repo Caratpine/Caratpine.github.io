@@ -29,7 +29,7 @@
 <meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-2eac4612a152df1e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
 <meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-86bc822c30774a70.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
 <meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-9d276e5dd30adbc4.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:updated_time" content="2019-09-19T15:37:31.350Z">
+<meta property="og:updated_time" content="2019-09-20T02:41:26.949Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Unix 网络 I&#x2F;O 模型">
 <meta name="twitter:description" content="这篇文章主要是对《Unix 网络编程卷1》第六章第二小节的一个总结。 Unix 的网络 IO 模型主要有：  阻塞式 I/O 非阻塞式 I/O I/O 复用 信号驱动式 I/O 异步 I/O  在介绍各种模型之前，先明确一个知识点：TCP 在建立连接之后，操作系统内核会为每一个连接创建相应的资源，比如接收缓冲区，发送缓冲区。TCP 的全双工模式，滑动窗口，重传等功能都是在两端的各自缓冲区中进行。当">
@@ -182,7 +182,7 @@ ga('send', 'pageview');
 <li>等待接收缓冲区的数据准备好；</li>
 <li>将数据从接收缓冲区拷贝到应用程序当中。</li>
 </ol>
-<p>下面介绍网络 I/O 模型用 UDP 的 recvform 函数来做例子。之所以用 UDP 的 recvfrom 是因为对于 UDP 而言，操作 1 中的<strong>数据准备好</strong>这个概念比较简单：要么整个数据已经收到，要么还没有。对于 TCP 而言这个概念相对来说比较复杂。这里可以将 recvfrom 函数看作系统调用，用来区分应用程序和内核。</p>
+<p>下面介绍网络 I/O 模型用 UDP 的 recvfrom 函数来做例子。之所以用 UDP 的 recvfrom 是因为对于 UDP 而言，操作 1 中的<strong>数据准备好</strong>这个概念比较简单：要么整个数据已经收到，要么还没有。对于 TCP 而言这个概念相对来说比较复杂。这里可以将 recvfrom 函数看作系统调用，用来区分应用程序和内核。</p>
 <h2 id="阻塞式-I-O"><a href="#阻塞式-I-O" class="headerlink" title="阻塞式 I/O"></a>阻塞式 I/O</h2><p><img src="https://upload-images.jianshu.io/upload_images/581057-bfb3451021c0dadd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="阻塞式 I/O 模型"></p>
 <p>如上图所示，应用程序调用 recvfrom 函数，直到数据报到达且被复制到应用进程的缓冲区中或者发生错误才返回。从调用开始到返回数据整段时间内都是被阻塞的。recvfrom 函数成功返回后，才开始处理数据报。</p>
 <h2 id="非阻塞-I-O"><a href="#非阻塞-I-O" class="headerlink" title="非阻塞 I/O"></a>非阻塞 I/O</h2><p><img src="https://upload-images.jianshu.io/upload_images/581057-fc4efd20051db070.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="非阻塞 I/O 模型"></p>
