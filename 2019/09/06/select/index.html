@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+
+
+  <html class="light page-post">
+
+
+<head>
+  <meta charset="utf-8">
+  
+  <title>浅谈 select | xdd1874</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  
+    <meta name="keywords" content="Linux," />
+  
+
+  <meta name="description" content="《Unix 网络 I/O 模型》) 这篇文章中，大概介绍了一下 I/O 复用模型，这篇文章主要是 I/O   复用 select 函数的工作机制。下文提到的描述符，套接字描述符，事件描述符，均为文件描述符。 select 函数剖析select 函数可以将多个文件描述符集中到一起统一监视。函数定义如下：1234#include &amp;lt;sys.select.h&amp;gt;#include &amp;lt;sys">
+<meta name="keywords" content="Linux">
+<meta property="og:type" content="article">
+<meta property="og:title" content="浅谈 select">
+<meta property="og:url" content="http://yoursite.com/2019/09/06/select/index.html">
+<meta property="og:site_name" content="xdd1874">
+<meta property="og:description" content="《Unix 网络 I/O 模型》) 这篇文章中，大概介绍了一下 I/O 复用模型，这篇文章主要是 I/O   复用 select 函数的工作机制。下文提到的描述符，套接字描述符，事件描述符，均为文件描述符。 select 函数剖析select 函数可以将多个文件描述符集中到一起统一监视。函数定义如下：1234#include &amp;lt;sys.select.h&amp;gt;#include &amp;lt;sys">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ax7d8lszj30ce06yaa2.jpg">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ax8xjyysj30ky0diaak.jpg">
+<meta property="og:updated_time" content="2019-09-24T13:24:07.137Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="浅谈 select">
+<meta name="twitter:description" content="《Unix 网络 I/O 模型》) 这篇文章中，大概介绍了一下 I/O 复用模型，这篇文章主要是 I/O   复用 select 函数的工作机制。下文提到的描述符，套接字描述符，事件描述符，均为文件描述符。 select 函数剖析select 函数可以将多个文件描述符集中到一起统一监视。函数定义如下：1234#include &amp;lt;sys.select.h&amp;gt;#include &amp;lt;sys">
+<meta name="twitter:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ax7d8lszj30ce06yaa2.jpg">
+
+  
+
+  
+    <link rel="icon" href="/images/favicon.ico">
+  
+
+  <link href="/css/styles.css?v=eaf5ab1e" rel="stylesheet">
+
+
+  
+    <link rel="stylesheet" href="/css/personal-style.css">
+  
+
+  
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-65883197-2', 'auto');
+ga('send', 'pageview');
+
+</script>
+<!-- End Google Analytics -->
+
+
+  
+
+</head>
+
+<body>
+
+
+  
+    <span id="toolbox-mobile" class="toolbox-mobile">导航</span>
+  
+
+  <div class="post-header CENTER">
+   
+  <div class="toolbox">
+    <a class="toolbox-entry" href="/">
+      <span class="toolbox-entry-text">导航</span>
+      <i class="icon-angle-down"></i>
+      <i class="icon-home"></i>
+    </a>
+    <ul class="list-toolbox">
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/archives/"
+            target="_self"
+            >
+            博客
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/category/"
+            target="_self"
+            >
+            分类
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/tag/"
+            target="_self"
+            >
+            标签
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/about/"
+            target="_self"
+            >
+            关于
+          </a>
+        </li>
+      
+    </ul>
+  </div>
+
+
+</div>
+
+
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">文章目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#select-函数剖析"><span class="toc-text">select 函数剖析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#代码实例"><span class="toc-text">代码实例</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#select-的缺点："><span class="toc-text">select 的缺点：</span></a></li></ol>
+  </div>
+
+
+
+<div class="content content-post CENTER">
+   <article id="post-select" class="article article-type-post" itemprop="blogPost">
+  <header class="article-header">
+    <h1 class="post-title">浅谈 select</h1>
+
+    <div class="article-meta">
+      <span>
+        <i class="icon-calendar"></i>
+        <span>2019.09.06</span>
+      </span>
+
+      
+        <span class="article-author">
+          <i class="icon-user"></i>
+          <span>xdd1874</span>
+        </span>
+      
+
+      
+
+
+      
+
+    </div>
+  </header>
+
+  <div class="article-content">
+    
+      <p><a href="[https://xdd1874.com/2019/09/05/unix-io-model/](https://xdd1874.com/2019/09/05/unix-io-model/">《Unix 网络 I/O 模型》</a><br>) 这篇文章中，大概介绍了一下 I/O 复用模型，这篇文章主要是 I/O   复用 select 函数的工作机制。下文提到的描述符，套接字描述符，事件描述符，均为文件描述符。</p>
+<h2 id="select-函数剖析"><a href="#select-函数剖析" class="headerlink" title="select 函数剖析"></a>select 函数剖析</h2><p>select 函数可以将多个文件描述符集中到一起统一监视。函数定义如下：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys.select.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/time.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">select</span> <span class="params">(<span class="keyword">int</span> maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, <span class="keyword">const</span> struct timeval *timeout)</span></span>;</span><br></pre></td></tr></table></figure></p>
+<p>返回：若有就绪描述符则为其数目，若超时则为 0, 若出错则为 -1.</p>
+<p>具体使用过程如下：</p>
+<ol>
+<li>设置文件描述符；</li>
+<li>指定监视事件；</li>
+<li>设置超时时间；</li>
+<li>调用 select 函数；</li>
+<li>查看调用结果。</li>
+</ol>
+<p>readset 表示读事件描述符集合，writeset 表示写事件描述符集合，exceptset 表示有异常事件描述符集合。timeout 表示超时时间。maxfdp1 后面再讲。</p>
+<p>上述三个事件描述符集合都存在数据类型 fd_set 当中，该数据结构可以理解为存有 0 和 1的位数组。<br><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ax7d8lszj30ce06yaa2.jpg" alt=""></p>
+<p>如上图，最左端的位表示文件描述符 0. 如果该位设置为 1, 则表示该文件描述符是监视对象。注册或更改描述符到 fd_set 变量都是由下面的宏完成的。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">FD_ZERO(fd_set *fdset);   <span class="comment">// 将 fdset 变量的所有位初始化为 0.</span></span><br><span class="line">FD_SET(<span class="keyword">int</span> fd, fd_set *fdset);  <span class="comment">// 在参数 fdset 指向的变量中注册文件描述符 fd 的信息。</span></span><br><span class="line">FD_CLR(<span class="keyword">int</span> fd, fd_set *fdset);  <span class="comment">// 从参数 fdset 指向的变量中清除文件描述符 fd 的信息。</span></span><br><span class="line">FD_ISSET(<span class="keyword">int</span> fd, fd_set *fdset);  <span class="comment">// 若参数 fdset 指向的变量中包含文件描述符 fd 的信息，则返回 true. 用此函数来验证 select 的调用结果。</span></span><br></pre></td></tr></table></figure></p>
+<p>头文件 &lt;sys/select.h&gt; 中定义的 <code>FD_SETSIZE</code> 常量是数据类型 fd_set 中的描述符总数，这个值通常是 1024, 在 select 诞生的那个年代，对于大多数应用程序来说，这个值很大，因为很多应用程序只是用 3 ~ 10 个描述符。 这个常量值也是可以修改的， 修改之后，必须重新编译内核才能够生效。</p>
+<p><code>maxfdp1</code> 参数表示指定待测试的描述符的个数，这个值是待测试的最大描述符加 1. 因为描述符的值是从 0 开始的。</p>
+<p>上述的 readset, writeset, exceptset 都是<strong>值-结果</strong>参数。调用 select 之后，如果返回正整数，我们可以从三个描述符集合参数中查看哪些描述符发生了变化。如下图。<br><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ax8xjyysj30ky0diaak.jpg" alt=""></p>
+<p>原来为 1 的所有位均变为 0, 但发生变化的文件描述符对应的位除外。1 表示该位置上的文件描述符发生了变化。之后我们可以用 <code>FD_ISSET</code> 来判断是哪个文件描述符发生了变化。</p>
+<h2 id="代码实例"><a href="#代码实例" class="headerlink" title="代码实例"></a>代码实例</h2><p>下面用 select 实现一个 echo 服务器：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;arpa/inet.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/socket.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/time.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/select.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> BUF_SIZE 100</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">error_handling</span><span class="params">(<span class="keyword">char</span> *message)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span> serv_sock, clnt_sock;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">sockaddr_in</span> <span class="title">serv_adr</span>, <span class="title">clnt_adr</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">timeval</span> <span class="title">timeout</span>;</span></span><br><span class="line">	fd_set reads, copy_reads;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">socklen_t</span> adr_sz;</span><br><span class="line">	<span class="keyword">int</span> fd_max, str_len, fd_num, i;</span><br><span class="line">	<span class="keyword">char</span> buf[BUF_SIZE];</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (argc != <span class="number">2</span>) &#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">"Usage: %s &lt;port&gt;\n"</span>, argv[<span class="number">0</span>]);</span><br><span class="line">		<span class="built_in">exit</span>(EXIT_FAILURE);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	serv_sock = socket(PF_INET, SOCK_STREAM, <span class="number">0</span>);</span><br><span class="line">	<span class="built_in">memset</span>(&amp;serv_adr, <span class="number">0</span>, <span class="keyword">sizeof</span>(serv_adr));</span><br><span class="line">	serv_adr.sin_family = AF_INET;</span><br><span class="line">	serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);</span><br><span class="line">	serv_adr.sin_port = htons(atoi(argv[<span class="number">1</span>]));</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (bind(serv_sock, (struct sockaddr *)&amp;serv_adr, <span class="keyword">sizeof</span>(serv_adr)) == <span class="number">-1</span>) &#123;</span><br><span class="line">		error_handling(<span class="string">"bind() error"</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (listen(serv_sock, <span class="number">5</span>) == <span class="number">-1</span>) &#123;</span><br><span class="line">		error_handling(<span class="string">"listen() error"</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	FD_ZERO(&amp;reads);</span><br><span class="line">	FD_SET(serv_sock, &amp;reads);</span><br><span class="line">	fd_max = serv_sock;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span>(<span class="number">1</span>) &#123;</span><br><span class="line">		copy_reads = reads;</span><br><span class="line">		timeout.tv_sec = <span class="number">5</span>;</span><br><span class="line">		timeout.tv_usec = <span class="number">5000</span>;</span><br><span class="line">		fd_num = select(fd_max + <span class="number">1</span>, &amp;copy_reads, <span class="literal">NULL</span>, <span class="literal">NULL</span>, &amp;timeout);</span><br><span class="line">		<span class="keyword">if</span> (fd_num == <span class="number">-1</span>) &#123;</span><br><span class="line">			<span class="comment">// 出现错误</span></span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (fd_num == <span class="number">0</span>) &#123;</span><br><span class="line">			<span class="comment">// 超时期限内无事发生，重新开始监控</span></span><br><span class="line">			<span class="keyword">continue</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 遍历文件描述符</span></span><br><span class="line">		<span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; fd_max + <span class="number">1</span>; i++) &#123;</span><br><span class="line">			<span class="comment">// 有 I/O 事件的文件描述符</span></span><br><span class="line">			<span class="keyword">if</span> (FD_ISSET(i, &amp;copy_reads)) &#123;</span><br><span class="line">				<span class="keyword">if</span> (i == serv_sock) &#123;	<span class="comment">// connection request</span></span><br><span class="line">					adr_sz = <span class="keyword">sizeof</span>(clnt_adr);</span><br><span class="line">					clnt_sock = accept(serv_sock, (struct sockaddr *)&amp;clnt_adr, &amp;adr_sz);</span><br><span class="line">					FD_SET(clnt_sock, &amp;reads);</span><br><span class="line">					<span class="keyword">if</span> (fd_max &lt; clnt_sock) &#123;</span><br><span class="line">						fd_max = clnt_sock;</span><br><span class="line">					&#125;</span><br><span class="line">					<span class="built_in">printf</span>(<span class="string">"connected client: %d \n"</span>, clnt_sock);</span><br><span class="line">				&#125; <span class="keyword">else</span> &#123;	<span class="comment">//read message</span></span><br><span class="line">					str_len = read(i, buf, BUF_SIZE);</span><br><span class="line">					<span class="comment">// 读到EOF</span></span><br><span class="line">					<span class="keyword">if</span> (str_len == <span class="number">0</span>) &#123;	<span class="comment">// close request</span></span><br><span class="line">						FD_CLR(i, &amp;reads);</span><br><span class="line">						close(i);</span><br><span class="line">						<span class="built_in">printf</span>(<span class="string">"close client: %d \n"</span>, i);</span><br><span class="line">					&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">						write(i, buf, str_len);</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	close(serv_sock);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">error_handling</span><span class="params">(<span class="keyword">char</span> *message)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="built_in">fputs</span>(message, <span class="built_in">stderr</span>);</span><br><span class="line">	fputc(<span class="string">'\n'</span>, <span class="built_in">stderr</span>);</span><br><span class="line">	<span class="built_in">exit</span>(EXIT_FAILURE);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>第 43, 44 行：初始化 fd_set 变量，并将服务端 socket 描述符注册到 reads 数组中。<br>第 48, 51 行：把 reads 变量的内容复制到 copy_reads 中。因为<strong>调用 select 之后，除了发生变化的文件描述符对应位之外，剩下的所有位将初始化为 0</strong>. 因此，为了记住初始值，必须要把复制之后的变量传递给 select 函数。<br>第 63, 65 行：用 <code>FD_ISSET</code> 循环查找状态发生变化的文件描述符。</p>
+<h2 id="select-的缺点："><a href="#select-的缺点：" class="headerlink" title="select 的缺点："></a>select 的缺点：</h2><ul>
+<li>监视的文件描述符数量少，默认是 1024.</li>
+<li>每次调用 select 都需要将三个 fd_set 数据结构从用户态拷贝到内核态，如果 fd 集合的数量很多，这个开销会很大。</li>
+<li>调用 select 之后要对所有的文件描述符进行轮询查找发生变化的描述符。</li>
+</ul>
+
+    
+  </div>
+</article>
+
+</div>
+
+
+  <a id="backTop" class="back-top">
+    <i class="icon-angle-up"></i>
+  </a>
+
+
+
+  <div class="modal" id="modal">
+  <span id="cover" class="cover hide"></span>
+  <div id="modal-dialog" class="modal-dialog hide-dialog">
+    <div class="modal-header">
+      <span id="close" class="btn-close">关闭</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <ul class="list-toolbox">
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/archives/"
+              target="_self"
+              >
+              博客
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/category/"
+              target="_self"
+              >
+              分类
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/tag/"
+              target="_self"
+              >
+              标签
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/about/"
+              target="_self"
+              >
+              关于
+            </a>
+          </li>
+        
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+
+
+  
+      <div class="fexo-comments comments-post">
+    
+
+    
+
+
+
+
+    
+<div id="gitment"></div>
+<link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
+<script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+<script>
+  var gitment = new Gitment({
+    owner: 'Caratpine',
+    repo: 'Caratpine.github.io',
+    oauth: {
+      client_id: '0a18b1c985d0c1b003ab',
+      client_secret: '837cce55a8c61171da791b539b49a7189b6fc21c',
+    },
+  })
+  gitment.render('gitment')
+</script>
+
+  </div>
+
+  
+
+  <script type="text/javascript">
+  function loadScript(url, callback) {
+    var script = document.createElement('script')
+    script.type = 'text/javascript';
+
+    if (script.readyState) { //IE
+      script.onreadystatechange = function() {
+        if (script.readyState == 'loaded' ||
+          script.readyState == 'complete') {
+          script.onreadystatechange = null;
+          callback();
+        }
+      };
+    } else { //Others
+      script.onload = function() {
+        callback();
+      };
+    }
+
+    script.src = url;
+    document.getElementsByTagName('head')[0].appendChild(script);
+  }
+
+  window.onload = function() {
+    loadScript('/js/bundle.js?235683', function() {
+      // load success
+    });
+  }
+</script>
+
+</body>
+</html>
