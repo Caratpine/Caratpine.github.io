@@ -25,8 +25,8 @@
 <meta property="og:locale" content="default">
 <meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ax7d8lszj30ce06yaa2.jpg">
 <meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ax8xjyysj30ky0diaak.jpg">
-<meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ay0ectwoj30u01t1awf.jpg">
-<meta property="og:updated_time" content="2019-09-24T13:47:54.844Z">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ay34a5xwj30u01r0kh9.jpg">
+<meta property="og:updated_time" content="2019-09-24T13:50:06.582Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="浅谈 select">
 <meta name="twitter:description" content="《Unix 网络 I/O 模型》 这篇文章中，大概介绍了一下 I/O 复用模型，这篇文章主要是 I/O 复用 select 函数的工作机制。下文提到的描述符，套接字描述符，事件描述符，均为文件描述符。 select 函数剖析select 函数可以将多个文件描述符集中到一起统一监视。函数定义如下：1234#include &amp;lt;sys.select.h&amp;gt;#include &amp;lt;sys/ti">
@@ -181,7 +181,7 @@ ga('send', 'pageview');
 <p><code>maxfdp1</code> 参数表示指定待测试的描述符的个数，这个值是待测试的最大描述符加 1. 因为描述符的值是从 0 开始的。</p>
 <p>上述的 readset, writeset, exceptset 都是<strong>值-结果</strong>参数。调用 select 之后，如果返回正整数，我们可以从三个描述符集合参数中查看哪些描述符发生了变化。如下图。<br><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ax8xjyysj30ky0diaak.jpg" alt=""></p>
 <p>原来为 1 的所有位均变为 0, 但发生变化的文件描述符对应的位除外。1 表示该位置上的文件描述符发生了变化。之后我们可以用 <code>FD_ISSET</code> 来判断是哪个文件描述符发生了变化。</p>
-<h2 id="代码实例"><a href="#代码实例" class="headerlink" title="代码实例"></a>代码实例</h2><p>下面用 select 实现一个 echo 服务器：<br><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ay0ectwoj30u01t1awf.jpg" alt="echo 服务器"></p>
+<h2 id="代码实例"><a href="#代码实例" class="headerlink" title="代码实例"></a>代码实例</h2><p>下面用 select 实现一个 echo 服务器：<br><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ay34a5xwj30u01r0kh9.jpg" alt="echo 服务器"></p>
 <p>第 43, 44 行：初始化 fd_set 变量，并将服务端 socket 描述符注册到 reads 数组中。<br>第 48, 51 行：把 reads 变量的内容复制到 copy_reads 中。因为<strong>调用 select 之后，除了发生变化的文件描述符对应位之外，剩下的所有位将初始化为 0</strong>. 因此，为了记住初始值，必须要把复制之后的变量传递给 select 函数。<br>第 63, 65 行：用 <code>FD_ISSET</code> 循环查找状态发生变化的文件描述符。</p>
 <h2 id="select-的缺点"><a href="#select-的缺点" class="headerlink" title="select 的缺点"></a>select 的缺点</h2><p>select 有如下缺点：</p>
 <ul>
