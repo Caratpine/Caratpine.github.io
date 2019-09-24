@@ -25,7 +25,7 @@
 <meta property="og:locale" content="default">
 <meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ax7d8lszj30ce06yaa2.jpg">
 <meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7ax8xjyysj30ky0diaak.jpg">
-<meta property="og:updated_time" content="2019-09-24T13:26:16.829Z">
+<meta property="og:updated_time" content="2019-09-24T13:30:39.811Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="浅谈 select">
 <meta name="twitter:description" content="《Unix 网络 I/O 模型》 这篇文章中，大概介绍了一下 I/O 复用模型，这篇文章主要是 I/O   复用 select 函数的工作机制。下文提到的描述符，套接字描述符，事件描述符，均为文件描述符。 select 函数剖析select 函数可以将多个文件描述符集中到一起统一监视。函数定义如下：1234#include &amp;lt;sys.select.h&amp;gt;#include &amp;lt;sys/">
@@ -162,7 +162,7 @@ ga('send', 'pageview');
 
   <div class="article-content">
     
-      <p><a href="[https://xdd1874.com/2019/09/05/unix-io-model/](https://xdd1874.com/2019/09/05/unix-io-model/">《Unix 网络 I/O 模型》</a> 这篇文章中，大概介绍了一下 I/O 复用模型，这篇文章主要是 I/O   复用 select 函数的工作机制。下文提到的描述符，套接字描述符，事件描述符，均为文件描述符。</p>
+      <p><a href="https://xdd1874.com/2019/09/05/unix-io-model/" target="_blank" rel="noopener">《Unix 网络 I/O 模型》</a> 这篇文章中，大概介绍了一下 I/O 复用模型，这篇文章主要是 I/O   复用 select 函数的工作机制。下文提到的描述符，套接字描述符，事件描述符，均为文件描述符。</p>
 <h2 id="select-函数剖析"><a href="#select-函数剖析" class="headerlink" title="select 函数剖析"></a>select 函数剖析</h2><p>select 函数可以将多个文件描述符集中到一起统一监视。函数定义如下：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys.select.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/time.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">select</span> <span class="params">(<span class="keyword">int</span> maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, <span class="keyword">const</span> struct timeval *timeout)</span></span>;</span><br></pre></td></tr></table></figure></p>
 <p>返回：若有就绪描述符则为其数目，若超时则为 0, 若出错则为 -1.</p>
 <p>具体使用过程如下：</p>
