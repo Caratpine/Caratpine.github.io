@@ -23,17 +23,17 @@
 <meta property="og:site_name" content="xdd1874">
 <meta property="og:description" content="这篇文章主要是对《Unix 网络编程卷1》第六章第二小节的一个总结。 Unix 的网络 IO 模型主要有：  阻塞式 I/O 非阻塞式 I/O I/O 复用 信号驱动式 I/O 异步 I/O  在介绍各种模型之前，先明确一个知识点：TCP 在建立连接之后，操作系统内核会为每一个连接创建相应的资源，比如接收缓冲区，发送缓冲区。TCP 的全双工模式，滑动窗口，重传等功能都是在两端的各自缓冲区中进行。当">
 <meta property="og:locale" content="default">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-bfb3451021c0dadd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-fc4efd20051db070.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-9f4f72e9a94b0156.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-2eac4612a152df1e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-86bc822c30774a70.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/581057-9d276e5dd30adbc4.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:updated_time" content="2019-09-20T02:41:26.949Z">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awt835kyj30yg0gn75i.jpg">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awoqg2abj30yg0hf769.jpg">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awoz827wj30yg0fzabx.jpg">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awp3oqgej30yg0hfabk.jpg">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awp7fxfgj30yg0j7q49.jpg">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awpd8m5xj30yg0hhq54.jpg">
+<meta property="og:updated_time" content="2019-09-24T13:06:00.741Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Unix 网络 I&#x2F;O 模型">
 <meta name="twitter:description" content="这篇文章主要是对《Unix 网络编程卷1》第六章第二小节的一个总结。 Unix 的网络 IO 模型主要有：  阻塞式 I/O 非阻塞式 I/O I/O 复用 信号驱动式 I/O 异步 I/O  在介绍各种模型之前，先明确一个知识点：TCP 在建立连接之后，操作系统内核会为每一个连接创建相应的资源，比如接收缓冲区，发送缓冲区。TCP 的全双工模式，滑动窗口，重传等功能都是在两端的各自缓冲区中进行。当">
-<meta name="twitter:image" content="https://upload-images.jianshu.io/upload_images/581057-bfb3451021c0dadd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+<meta name="twitter:image" content="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awt835kyj30yg0gn75i.jpg">
 
   
 
@@ -183,20 +183,20 @@ ga('send', 'pageview');
 <li>将数据从接收缓冲区拷贝到应用程序当中。</li>
 </ol>
 <p>下面介绍网络 I/O 模型用 UDP 的 recvfrom 函数来做例子。之所以用 UDP 的 recvfrom 是因为对于 UDP 而言，操作 1 中的<strong>数据准备好</strong>这个概念比较简单：要么整个数据已经收到，要么还没有。对于 TCP 而言这个概念相对来说比较复杂。这里可以将 recvfrom 函数看作系统调用，用来区分应用程序和内核。</p>
-<h2 id="阻塞式-I-O"><a href="#阻塞式-I-O" class="headerlink" title="阻塞式 I/O"></a>阻塞式 I/O</h2><p><img src="https://upload-images.jianshu.io/upload_images/581057-bfb3451021c0dadd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="阻塞式 I/O 模型"></p>
+<h2 id="阻塞式-I-O"><a href="#阻塞式-I-O" class="headerlink" title="阻塞式 I/O"></a>阻塞式 I/O</h2><p><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awt835kyj30yg0gn75i.jpg" alt="阻塞式 I/O 模型"></p>
 <p>如上图所示，应用程序调用 recvfrom 函数，直到数据报到达且被复制到应用进程的缓冲区中或者发生错误才返回。从调用开始到返回数据整段时间内都是被阻塞的。recvfrom 函数成功返回后，才开始处理数据报。</p>
-<h2 id="非阻塞-I-O"><a href="#非阻塞-I-O" class="headerlink" title="非阻塞 I/O"></a>非阻塞 I/O</h2><p><img src="https://upload-images.jianshu.io/upload_images/581057-fc4efd20051db070.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="非阻塞 I/O 模型"></p>
+<h2 id="非阻塞-I-O"><a href="#非阻塞-I-O" class="headerlink" title="非阻塞 I/O"></a>非阻塞 I/O</h2><p><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awoqg2abj30yg0hf769.jpg" alt="非阻塞 I/O 模型"></p>
 <p>通过套接字设置，我们可以把应用程序的套接字设置成非阻塞的，应用程序调用 recvfrom 函数，当内核缓冲区没有数据时，应用程序的进程并不会被投入睡眠，而是返回一个 EWOULDBLOCK 错误。应用程序可以捕获处理这个错误，然后轮询调用 recvfrom 函数，直到内核缓冲区的数据准备好，数据被复制到应用程序。recvfrom 函数成功返回，接着处理数据。</p>
 <h2 id="I-O-复用"><a href="#I-O-复用" class="headerlink" title="I/O 复用"></a>I/O 复用</h2><p>I/O 复用又被称为事件驱动。可以理解为这是内核提供的一个系统调用，如 select, poll, epoll 和 kequeue。向事件驱动注册相应的套接字事件，如读事件，写事件，事件驱动用来监视这些套接字的事件状态。当某些套接字就绪（可读或者可写）时，事件驱动会返回相应的套接字描述符。</p>
-<p><img src="https://upload-images.jianshu.io/upload_images/581057-9f4f72e9a94b0156.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="I/O 复用模型"></p>
+<p><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awoz827wj30yg0fzabx.jpg" alt="I/O 复用模型"></p>
 <p>如上图所示，当应用程序调用 select 函数时，程序阻塞在这个系统调用上，而不是阻塞在真正的 I/O 系统调用上。当 select 返回的套接字可读时，我们调用 recvfrom 把所读的数据报复制到应用程序中。使用 I/O 复用的优势在于我们可以等待多个描述符就绪。</p>
-<h2 id="信号驱动式-I-O"><a href="#信号驱动式-I-O" class="headerlink" title="信号驱动式 I/O"></a>信号驱动式 I/O</h2><p><img src="https://upload-images.jianshu.io/upload_images/581057-2eac4612a152df1e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="信号驱动式 I/O 模型"></p>
+<h2 id="信号驱动式-I-O"><a href="#信号驱动式-I-O" class="headerlink" title="信号驱动式 I/O"></a>信号驱动式 I/O</h2><p><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awp3oqgej30yg0hfabk.jpg" alt="信号驱动式 I/O 模型"></p>
 <p>信号驱动 I/O 是让内核在套接字描述符就绪时通过发送 SIGIO 信号来通知应用程序。<br>如上图，首先开启套接字的信号驱动式 I/O 功能，并通过 sigaction 系统调用定义一个信号处理函数。该系统调用将立即返回，应用程序继续工作，也就是说它没有阻塞。当数据报准备好读取时，内核就为该应用程序发送一个 SIGIO 信号。我们可以在之前定义的信号处理函数中调用 recvfrom 读取数据报，并通知主循环数据已准备好待处理，也可以立即通知主循环，让它读取数据报。</p>
 <p>这种模型的优势在于等待数据准备好期间应用程序不阻塞。主循环可以继续执行，只要等待来自信号处理函数的通知即可。</p>
-<h2 id="异步-I-O"><a href="#异步-I-O" class="headerlink" title="异步 I/O"></a>异步 I/O</h2><p><img src="https://upload-images.jianshu.io/upload_images/581057-86bc822c30774a70.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="异步 I/O 模型"></p>
+<h2 id="异步-I-O"><a href="#异步-I-O" class="headerlink" title="异步 I/O"></a>异步 I/O</h2><p><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awp7fxfgj30yg0j7q49.jpg" alt="异步 I/O 模型"></p>
 <p>异步 I/O 模型是告知内核启动某个动作（读，写等），并让内核在整个操作（<strong>包括将数据从内核复制到应用程序的缓冲区</strong>）完成后通知我们。这种模型和信号驱动式 I/O 模型的区别在于：<strong>信号驱动式 I/O 是由内核通知应用程序何时可以启动一个 I/O 操作，而异步 I/O 模型是 I/O 操作也由此模型完成，等I/O 操作完成之后内核再通知应用程序。</strong></p>
 <p>如上图，调用 aio_read, 该系统调用立即返回，而且等待 I/O 完成期间，应用程序是不被阻塞的。</p>
-<h2 id="各种-I-O-模型的比较"><a href="#各种-I-O-模型的比较" class="headerlink" title="各种 I/O 模型的比较"></a>各种 I/O 模型的比较</h2><p><img src="https://upload-images.jianshu.io/upload_images/581057-9d276e5dd30adbc4.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="5 种 I/O 模型的比较"></p>
+<h2 id="各种-I-O-模型的比较"><a href="#各种-I-O-模型的比较" class="headerlink" title="各种 I/O 模型的比较"></a>各种 I/O 模型的比较</h2><p><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7awpd8m5xj30yg0hhq54.jpg" alt="5 种 I/O 模型的比较"></p>
 <p>上图可以看出，前 4 种模型的主要区别在于第一阶段，因为它们的第二阶段是一样的：<strong>在数据从内核复制到应用程序期间，进程阻塞于 recvfrom 调用。</strong>相反，异步 I/O 模型在这两个阶段都要处理。</p>
 <h2 id="同步-I-O-和-异步-I-O"><a href="#同步-I-O-和-异步-I-O" class="headerlink" title="同步 I/O 和 异步 I/O"></a>同步 I/O 和 异步 I/O</h2><p>POSIX 把这两个术语定义如下：</p>
 <ul>
