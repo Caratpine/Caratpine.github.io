@@ -338,8 +338,8 @@ ga('send', 'pageview');
     <script src="//cdn.jsdelivr.net/npm/valine@latest/dist/Valine.min.js"></script>
     <div id="comment" class="vcomment" ></div>
     <script>
-        var notify = 'false' == true ? true : false;
-        var verify = 'false' == true ? true : false;
+        var notify = 'true' == true ? true : false;
+        var verify = 'true' == true ? true : false;
         var GUEST_INFO = ['nick','mail','link'];
         var guest_info = 'nick,mail,link'.split(',').filter(function(item){
             return GUEST_INFO.indexOf(item) > -1
@@ -349,9 +349,9 @@ ga('send', 'pageview');
             el: '.vcomment',
             notify: notify,
             verify: verify,
-            appId: "null",
-            appKey: "null",
-            avatar:'mm',
+            appId: "KELkrgepM0FWVJXlbUslq0U3-gzGzoHsz",
+            appKey: "fpEwQslsPxVug4nAN6szDUOo",
+            avatar:'robohash',
             placeholder: "Just go go",
             guest_info:guest_info,
             pageSize:'10'
