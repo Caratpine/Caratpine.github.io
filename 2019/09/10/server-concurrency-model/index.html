@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+
+
+  <html class="light page-post">
+
+
+<head>
+  <meta charset="utf-8">
+  
+  <title>网络编程：服务端并发模型 | xdd1874</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  
+    <meta name="keywords" content="Linux," />
+  
+
+  <meta name="description" content="这篇文章主要介绍几个服务端程序的并发模型。  多进程同步模型。 多线程同步模型。 pre-fork 多进程同步模型。 Reactor 模型。  多进程同步模型。这种模型通过创建多个进程来提高服务端的并发能力。通常的做法是服务端 accept 到客户端的请求之后，为每个客户端请求创建一个进程来处理数据。 forkLinux 下使用 fork 函数来创建进程。由 fork 创建的新进程被称为子进程 (">
+<meta name="keywords" content="Linux">
+<meta property="og:type" content="article">
+<meta property="og:title" content="网络编程：服务端并发模型">
+<meta property="og:url" content="http://yoursite.com/2019/09/10/server-concurrency-model/index.html">
+<meta property="og:site_name" content="xdd1874">
+<meta property="og:description" content="这篇文章主要介绍几个服务端程序的并发模型。  多进程同步模型。 多线程同步模型。 pre-fork 多进程同步模型。 Reactor 模型。  多进程同步模型。这种模型通过创建多个进程来提高服务端的并发能力。通常的做法是服务端 accept 到客户端的请求之后，为每个客户端请求创建一个进程来处理数据。 forkLinux 下使用 fork 函数来创建进程。由 fork 创建的新进程被称为子进程 (">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-09-25T23:44:20.236Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="网络编程：服务端并发模型">
+<meta name="twitter:description" content="这篇文章主要介绍几个服务端程序的并发模型。  多进程同步模型。 多线程同步模型。 pre-fork 多进程同步模型。 Reactor 模型。  多进程同步模型。这种模型通过创建多个进程来提高服务端的并发能力。通常的做法是服务端 accept 到客户端的请求之后，为每个客户端请求创建一个进程来处理数据。 forkLinux 下使用 fork 函数来创建进程。由 fork 创建的新进程被称为子进程 (">
+
+  
+
+  
+    <link rel="icon" href="/images/favicon.ico">
+  
+
+  <link href="/css/styles.css?v=c114cbeddx" rel="stylesheet">
+
+
+  
+    <link rel="stylesheet" href="/css/personal-style.css">
+  
+
+  
+<!-- Google Analytics -->
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-65883197-2', 'auto');
+ga('send', 'pageview');
+
+</script>
+<!-- End Google Analytics -->
+
+
+  
+
+  
+
+
+  
+    <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.3.0/css/font-awesome.min.css">
+  
+
+</head>
+
+<body>
+
+
+  
+    <span id="toolbox-mobile" class="toolbox-mobile">导航</span>
+  
+
+  <div class="post-header CENTER">
+   
+  <div class="toolbox">
+    <a class="toolbox-entry" href="/">
+      <span class="toolbox-entry-text">导航</span>
+      <i class="icon-angle-down"></i>
+      <i class="icon-home"></i>
+    </a>
+    <ul class="list-toolbox">
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/archives/"
+            rel="noopener noreferrer"
+            target="_self"
+            >
+            博客
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/category/"
+            rel="noopener noreferrer"
+            target="_self"
+            >
+            分类
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/tag/"
+            rel="noopener noreferrer"
+            target="_self"
+            >
+            标签
+          </a>
+        </li>
+      
+        <li class="item-toolbox">
+          <a
+            class="CIRCLE"
+            href="/about/"
+            rel="noopener noreferrer"
+            target="_self"
+            >
+            关于
+          </a>
+        </li>
+      
+    </ul>
+  </div>
+
+
+</div>
+
+
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">文章目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#多进程同步模型。"><span class="toc-text">多进程同步模型。</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#fork"><span class="toc-text">fork</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#僵尸进程"><span class="toc-text">僵尸进程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#wait-和-waitpid-函数"><span class="toc-text">wait 和 waitpid 函数</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#多线程同步模型"><span class="toc-text">多线程同步模型</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#pre-fork-多进程同步模型"><span class="toc-text">pre-fork 多进程同步模型</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Reactor-模型"><span class="toc-text">Reactor 模型</span></a></li></ol>
+  </div>
+
+
+
+<div class="content content-post CENTER">
+   <article id="post-server-concurrency-model" class="article article-type-post" itemprop="blogPost">
+  <header class="article-header">
+    <h1 class="post-title">网络编程：服务端并发模型</h1>
+
+    <div class="article-meta">
+      <span>
+        <i class="icon-calendar"></i>
+        <span>2019.09.10</span>
+      </span>
+
+      
+        <span class="article-author">
+          <i class="icon-user"></i>
+          <span>xdd1874</span>
+        </span>
+      
+
+      
+
+
+      
+
+      
+      <i class="fa fa-eye"></i> 
+        <span id="busuanzi_container_page_pv">
+           &nbsp热度 <span id="busuanzi_value_page_pv">
+           <i class="fa fa-spinner fa-spin"></i></span>℃
+        </span>
+      
+      
+    </div>
+  </header>
+
+  <div class="article-content">
+    
+      <p>这篇文章主要介绍几个服务端程序的并发模型。</p>
+<ul>
+<li>多进程同步模型。</li>
+<li>多线程同步模型。</li>
+<li>pre-fork 多进程同步模型。</li>
+<li>Reactor 模型。</li>
+</ul>
+<h2 id="多进程同步模型。"><a href="#多进程同步模型。" class="headerlink" title="多进程同步模型。"></a>多进程同步模型。</h2><p>这种模型通过创建多个进程来提高服务端的并发能力。通常的做法是服务端 accept 到客户端的请求之后，为每个客户端请求创建一个进程来处理数据。</p>
+<h3 id="fork"><a href="#fork" class="headerlink" title="fork"></a>fork</h3><p>Linux 下使用 fork 函数来创建进程。由 fork 创建的新进程被称为子进程 (child process). 父进程 (parent process) 调用 fork 之后产生一个子进程。在父进程中 fork 的返回值为子进程的 PID, 在子进程中 fork 返回的是 0. 如果 fork 出错，那么返回的是 -1.</p>
+<p>fork 调用成功之后，子进程获得父进程的数据空间、堆、栈的副本，注意子进程只是拥有副本，不共享这些存储空间部分。但是，通常 fork 并不执行一个父进程数据段、堆、栈的完全部分。作为替代，使用了写时复制 (Copy-On-Write) 技术。这些区域由父进程和子进程共享，而且内核将它们的访问权限改变为只读。如果父进程和子进程中任一个试图修改这些区域，则内核只为修改区域的那块内存制作一个副本，通常是虚拟存储系统中的一页。下面通过一个实例介绍一下 fork.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"># coding=utf-8</span><br><span class="line"></span><br><span class="line">import os</span><br><span class="line"></span><br><span class="line">foo = 22</span><br><span class="line">pid = os.fork()   #: fork 调用之后得到父，子两个进程</span><br><span class="line">if pid == 0:</span><br><span class="line">    print(&apos;child process&apos;)</span><br><span class="line">    foo += 1</span><br><span class="line">elif pid &gt; 0:</span><br><span class="line">    print(&apos;parent process&apos;)</span><br><span class="line">else:</span><br><span class="line">    print(&apos;fork error&apos;)</span><br><span class="line"></span><br><span class="line">print(&apos;foo = &#123;&#125;&apos;.format(foo))</span><br></pre></td></tr></table></figure>
+<p>一般来说，在 fork 之后是父进程先执行还是子进程先执行是不确定的。这个取决于内核所使用的调度算法。</p>
+<p>fork 还有一个重要的特性就是<strong>父进程当中所有打开的文件描述符都会被“复制”到子进程当中</strong> 这里虽然是复制，但是父进程和子进程当中的文件描述符都指向同一块文件表。所以如果父进程和子进程写同一描述符指向的文件，但是没有做任何形式的同步，那么它们的输出就会相互混乱。对于网络程序来说，正确的做法是在 fork 之后，父进程和子进程各自关闭它们不需要使用的文件描述符。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"># coding=utf-8</span><br><span class="line"></span><br><span class="line">import os</span><br><span class="line">import socket</span><br><span class="line"></span><br><span class="line">response = b&apos;HTTP/1.1 200 OK\r\nServer: Apache\r\nContent-Length: 81\r\nContent-Type: text/html\r\n\r\n&apos;</span><br><span class="line"></span><br><span class="line">sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">sock.bind((&apos;0.0.0.0&apos;, 9190))</span><br><span class="line">sock.listen(1024)</span><br><span class="line">while True:</span><br><span class="line">    client, addr = sock.accept()</span><br><span class="line">    pid = os.fork()</span><br><span class="line">    if pid &gt; 0:</span><br><span class="line">        client.close()</span><br><span class="line">    elif pid == 0:</span><br><span class="line">        sock.close()</span><br><span class="line">        data = client.recv(4096)</span><br><span class="line">        client.send(response)</span><br><span class="line">        client.close()</span><br><span class="line">    else:</span><br><span class="line">        pass</span><br></pre></td></tr></table></figure>
+<h3 id="僵尸进程"><a href="#僵尸进程" class="headerlink" title="僵尸进程"></a>僵尸进程</h3><p>一个进程可以正常运行结束，也可以因为一些异常终止。每个进程退出时候，内核会释放该进程的所有资源，包括打开的文件描述符，占用的内存等。但是仍然为其保留一定的信息（包括进程的 PID 等）。</p>
+<p>当一个子进程先退出时，如果父进程没有回收进程，那么子进程会变成僵尸进程。操作系统的进程号是有限的，如果僵尸进程太多，大量的进程号被占用，从而无法创建新的进程。</p>
+<p>当父进程比子进程先退出时，父进程下的所有子进程都会被 init 进程接管，这个进程的 PID 是 1, 子进程退出后，init 进程来负责回收子进程的资源。</p>
+<h3 id="wait-和-waitpid-函数"><a href="#wait-和-waitpid-函数" class="headerlink" title="wait 和 waitpid 函数"></a>wait 和 waitpid 函数</h3><p>那么父进程如何回收子进程呢？我们可以使用 <code>wait</code> 和 <code>waitpid</code> 函数。父进程调用 wait 或 waitpid 之后：</p>
+<ul>
+<li>如果其所有子进程都还在运行，则被阻塞。</li>
+<li>如果一个子进程已终止，正等待父进程获取其终止状态，则取得该子进程的终止状态立即返回。</li>
+<li>如果它没有任何子进程，则立即出错返回。</li>
+</ul>
+<p>这两个函数的主要区别是：</p>
+<ul>
+<li>在一个子进程终止前，wait 使其调用者阻塞，而 waitpid 有一个选项，可以使调用者不阻塞。</li>
+<li>waitpid 并不等待在其调用之后的第一个终止子进程，它有若干个选项，可以控制它所等待的进程。</li>
+</ul>
+<p>知道了回收子进程的方法，那么该如何使用呢？子进程什么时候终止？父进程调用 wait 之后要一直被阻塞吗？调用 waitpid 之后要不停的等待子进程终止吗？我们可以用信号来处理这些问题。</p>
+<p>当一个进程正常或异常终止时，内核会向它的父进程异步发送 <code>SIGCHLD</code> 信号。父进程可以选择忽略该信号，或者注册一个该信号的处理函数，来做一些回收处理子进程的工作。</p>
+<h2 id="多线程同步模型"><a href="#多线程同步模型" class="headerlink" title="多线程同步模型"></a>多线程同步模型</h2><p>多进程同步模型存在一些问题：</p>
+<ul>
+<li>创建进程的过程中会带来一定的开销。</li>
+<li>进程间通信难度复杂，需要特殊的 IPC 技术。</li>
+<li>CPU 调度切换进程开销大。</li>
+</ul>
+<p>对于一个服务端程序来说，如果有大量的客户端请求，每次处理这些请求都要创建、销毁进程，这个性能会大大下降。所以出现了多线程同步模型。</p>
+<p>线程相比于进程有如下的优点：</p>
+<ul>
+<li>线程的创建和上下文切换比进程的创建和上下文切换更快。</li>
+<li>线程在进程的当中，它们共享进程的资源，所以通信起来不需要 IPC 技术。</li>
+</ul>
+<p>这种模型通过创建多个线程来提高服务端的并发能力。通常的做法是服务端 accept 到客户端的请求之后，为每个客户端请求创建一个线程来处理数据。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"># coding=utf-8</span><br><span class="line"></span><br><span class="line">import socket</span><br><span class="line">import threading</span><br><span class="line"></span><br><span class="line">response = b&apos;HTTP/1.1 200 OK\r\nServer: Apache\r\nContent-Length: 81\r\nContent-Type: text/html\r\n\r\n&apos;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">def handle_client(client_sock):</span><br><span class="line">    client_sock = client.recv(4096)</span><br><span class="line">    client_sock.send(response)</span><br><span class="line">    client_sock.close()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">def main():</span><br><span class="line">    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">    sock.bind((&apos;0.0.0.0&apos;, 9190))</span><br><span class="line">    sock.listen(1024)</span><br><span class="line">    while True:</span><br><span class="line">        client, addr = sock.accept()</span><br><span class="line">        t = threading.Thread(target=handle_client, args=(client,))</span><br><span class="line">        t.start()</span><br></pre></td></tr></table></figure></p>
+<h2 id="pre-fork-多进程同步模型"><a href="#pre-fork-多进程同步模型" class="headerlink" title="pre-fork 多进程同步模型"></a>pre-fork 多进程同步模型</h2><p>这种模型与多进程同步模型的区别在于，我们不需要在客户端请求过来之后为它创建一个进程，而是事先创建 N 个子进程，用这些子进程来处理客户端请求。通常的做法是，父进程 fork 出多个子进程，Linux 2.6 版本之前，当有请求到来时，子进程被唤醒共同对服务端 accept 进行竞争，每个子进程都有机会获得客户端请求，但是最终只有一个子进程能够 accept 成功拿到客户端请求。这种情况叫作“惊群效应”。Linux 2.6 版本之后，解决掉了 accept 的“惊群效应”问题。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"># coding=utf-8</span><br><span class="line"></span><br><span class="line">import os</span><br><span class="line">import socket</span><br><span class="line"></span><br><span class="line">response = b&apos;HTTP/1.1 200 OK\r\nServer: Apache\r\nContent-Length: 81\r\nContent-Type: text/html\r\n\r\n&apos;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">def main():</span><br><span class="line">    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">    sock.bind((&apos;0.0.0.0&apos;, 9190))</span><br><span class="line">    sock.listen(1024)</span><br><span class="line"></span><br><span class="line">    p = 0</span><br><span class="line">    for i in range(2):</span><br><span class="line">        p = 0</span><br><span class="line">        pid = os.fork()</span><br><span class="line">        if pid == 0:</span><br><span class="line">            break</span><br><span class="line">        elif pid &gt; 0:</span><br><span class="line">            p = pid</span><br><span class="line">        else:</span><br><span class="line">            pass</span><br><span class="line">    if p == 0:  #: 子进程</span><br><span class="line">        while True:</span><br><span class="line">            client, addr = sock.accept()</span><br><span class="line">            data = client.recv(4096)</span><br><span class="line">            client.send(response)</span><br><span class="line">            client.close()</span><br><span class="line">    else:  #: 父进程</span><br><span class="line">        pass</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">if __name__ == &apos;__main__&apos;:</span><br><span class="line">    main()</span><br></pre></td></tr></table></figure>
+<h2 id="Reactor-模型"><a href="#Reactor-模型" class="headerlink" title="Reactor 模型"></a>Reactor 模型</h2><p>Reactor 是一种基于事件驱动的分发处理模型。一个连接里完整的网络处理一般分为 accept, read, decode, process, encode, send 这几步。我们可以把每一步封装成一个 Task, 每个 Task 都对应特定的网络事件。把这些 Task 注册到事件驱动当中，事件驱动一直轮询，当有 Task 就绪时，返回对应的网络事件，根据不同的网络事件来选择执行 (dispatch) 不同的 Handler 方法。</p>
+
+    
+  </div>
+
+</article>
+
+
+   
+  <div class="text-center donation">
+    <div class="inner-donation">
+      <span class="btn-donation">支持一下</span>
+      <div class="donation-body">
+        <div class="tip text-center">请 xdd1874 喝一杯咖啡？</div>
+        <ul>
+        
+          <li class="item">
+            
+              <span>微信扫一扫</span>
+            
+            <img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7c57wotvjj30u00u0tbb.jpg" alt="">
+          </li>
+        
+        </ul>
+      </div>
+    </div>
+  </div>
+
+
+   
+  <div class="box-prev-next clearfix">
+    <a class="show pull-left" href="/2019/09/06/select/">
+        <i class="icon icon-angle-left"></i>
+    </a>
+    <a class="hide pull-right" href="/">
+        <i class="icon icon-angle-right"></i>
+    </a>
+  </div>
+
+
+
+
+</div>
+
+
+  <a id="backTop" class="back-top">
+    <i class="icon-angle-up"></i>
+  </a>
+
+
+
+  <div class="modal" id="modal">
+  <span id="cover" class="cover hide"></span>
+  <div id="modal-dialog" class="modal-dialog hide-dialog">
+    <div class="modal-header">
+      <span id="close" class="btn-close">关闭</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <ul class="list-toolbox">
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/archives/"
+              rel="noopener noreferrer"
+              target="_self"
+              >
+              博客
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/category/"
+              rel="noopener noreferrer"
+              target="_self"
+              >
+              分类
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/tag/"
+              rel="noopener noreferrer"
+              target="_self"
+              >
+              标签
+            </a>
+          </li>
+        
+          <li class="item-toolbox">
+            <a
+              class="CIRCLE"
+              href="/about/"
+              rel="noopener noreferrer"
+              target="_self"
+              >
+              关于
+            </a>
+          </li>
+        
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+
+
+  
+      <div class="fexo-comments comments-post">
+    
+
+    
+
+
+
+
+    
+
+    
+    
+
+    
+
+    
+    
+
+    <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/valine@latest/dist/Valine.min.js"></script>
+    <div id="comment" class="vcomment" ></div>
+    <script>
+        var notify = 'true' == true ? true : false;
+        var verify = 'true' == true ? true : false;
+        var GUEST_INFO = ['nick','mail','link'];
+        var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+            return GUEST_INFO.indexOf(item) > -1
+        });
+        guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+        window.valine = new Valine({
+            el: '.vcomment',
+            notify: notify,
+            verify: verify,
+            appId: "KELkrgepM0FWVJXlbUslq0U3-gzGzoHsz",
+            appKey: "fpEwQslsPxVug4nAN6szDUOo",
+            avatar:'robohash',
+            placeholder: "Just go go",
+            guest_info:guest_info,
+            pageSize:'10'
+        });
+    </script>
+  
+    
+
+  </div>
+
+  
+
+  <script type="text/javascript">
+  function loadScript(url, callback) {
+    var script = document.createElement('script')
+    script.type = 'text/javascript';
+
+    if (script.readyState) { //IE
+      script.onreadystatechange = function() {
+        if (script.readyState == 'loaded' ||
+          script.readyState == 'complete') {
+          script.onreadystatechange = null;
+          callback();
+        }
+      };
+    } else { //Others
+      script.onload = function() {
+        callback();
+      };
+    }
+
+    script.src = url;
+    document.getElementsByTagName('head')[0].appendChild(script);
+  }
+
+  window.onload = function() {
+    loadScript('/js/bundle.js?235683', function() {
+      // load success
+    });
+  }
+</script>
+
+</body>
+</html>
